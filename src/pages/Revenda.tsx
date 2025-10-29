@@ -616,12 +616,26 @@ export default function Revenda() {
         throw new Error(result.error);
       }
 
+      const roleLabels: Record<string, string> = {
+        admin: "Admin",
+        master: "Master",
+        reseller: "Revendedor"
+      };
+
       toast({
         title: "Status atualizado com sucesso!",
         description: `O status foi alterado para ${status === 'active' ? 'Ativo' : status === 'inactive' ? 'Inativo' : 'Suspenso'}.`,
       });
 
-      loadResellers();
+      // Atualizar o estado local para refletir a mudança de status
+      setResellers(prevResellers =>
+        prevResellers.map(reseller =>
+          reseller.user_id === userId
+            ? { ...reseller, status: status }
+            : reseller
+        )
+      );
+
     } catch (error: any) {
       console.error("Error updating status:", error);
       toast({
@@ -674,10 +688,22 @@ export default function Revenda() {
         description: `Adicionado 1 mês de atividade para ${selectedReseller.full_name}.`,
       });
 
+      // Atualizar o estado local para refletir a nova data de vencimento do crédito e status
+      setResellers(prevResellers =>
+        prevResellers.map(reseller =>
+          reseller.user_id === selectedReseller.user_id
+            ? {
+                ...reseller,
+                credit_expiry_date: result.newExpiryDate,
+                status: 'active', // A renovação sempre define o status como ativo
+              }
+            : reseller
+        )
+      );
+
       setRenewDialogOpen(false);
       setSelectedReseller(null);
-      loadResellers();
-      loadUserCredits();
+      loadUserCredits(); // Recarregar saldo de créditos do usuário logado
     } catch (error: any) {
       console.error("Error renewing credit:", error);
       toast({
@@ -732,7 +758,15 @@ export default function Revenda() {
         description: `O nível foi alterado para ${roleLabels[newRole]}.`,
       });
 
-      loadResellers();
+      // Atualizar o estado local para refletir a mudança de nível
+      setResellers(prevResellers =>
+        prevResellers.map(reseller =>
+          reseller.user_id === userId
+            ? { ...reseller, role: newRole }
+            : reseller
+        )
+      );
+
     } catch (error: any) {
       console.error("Error updating role:", error);
       toast({
@@ -802,10 +836,24 @@ export default function Revenda() {
         description: `O vencimento do crédito para ${selectedResellerForCreditExpiry.full_name} foi atualizado para ${format(newCreditExpiryDate, "dd/MM/yyyy")} e o status para ${newStatus === 'active' ? 'Ativo' : 'Inativo'}.`,
       });
 
+      // Atualizar o estado local para refletir a mudança imediatamente
+      setResellers(prevResellers =>
+        prevResellers.map(reseller =>
+          reseller.user_id === selectedResellerForCreditExpiry.user_id
+            ? {
+                ...reseller,
+                credit_expiry_date: newCreditExpiryDate.toISOString(),
+                status: newStatus,
+              }
+            : reseller
+        )
+      );
+
       setCreditExpiryDialogOpen(false);
       setSelectedResellerForCreditExpiry(null);
       setNewCreditExpiryDate(undefined);
-      loadResellers(); // Recarregar dados para refletir a mudança
+      // Não é mais necessário chamar loadResellers() aqui para a atualização imediata da UI.
+      // loadResellers(); // Removido para evitar recarregar a página inteira
     } catch (error: any) {
       console.error("Error updating credit expiry date:", error);
       toast({
