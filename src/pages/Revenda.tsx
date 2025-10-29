@@ -972,6 +972,7 @@ export default function Revenda() {
                 id="fullName"
                 {...form.register("fullName")}
                 placeholder="João Silva"
+                className="w-full"
               />
               {form.formState.errors.fullName && (
                 <p className="text-sm text-destructive">
@@ -987,6 +988,7 @@ export default function Revenda() {
                 type="email"
                 {...form.register("email")}
                 placeholder="joao@exemplo.com"
+                className="w-full"
               />
               {form.formState.errors.email && (
                 <p className="text-sm text-destructive">
@@ -1002,6 +1004,7 @@ export default function Revenda() {
                 type="password"
                 {...form.register("password")}
                 placeholder="••••••••"
+                className="w-full"
               />
               {form.formState.errors.password && (
                 <p className="text-sm text-destructive">
@@ -1018,7 +1021,7 @@ export default function Revenda() {
                 }
                 defaultValue="reseller"
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione o nível" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1071,6 +1074,7 @@ export default function Revenda() {
                 id="edit-fullName"
                 {...editForm.register("fullName")}
                 placeholder="João Silva"
+                className="w-full"
               />
               {editForm.formState.errors.fullName && (
                 <p className="text-sm text-destructive">
@@ -1086,6 +1090,7 @@ export default function Revenda() {
                 type="email"
                 {...editForm.register("email")}
                 placeholder="joao@exemplo.com"
+                className="w-full"
               />
               {editForm.formState.errors.email && (
                 <p className="text-sm text-destructive">
@@ -1101,6 +1106,7 @@ export default function Revenda() {
                 type="tel"
                 {...editForm.register("phone")}
                 placeholder="(XX) XXXXX-XXXX"
+                className="w-full"
               />
               {editForm.formState.errors.phone && (
                 <p className="text-sm text-destructive">
@@ -1116,6 +1122,7 @@ export default function Revenda() {
                 type="password"
                 {...editForm.register("password")}
                 placeholder="••••••••"
+                className="w-full"
               />
               {editForm.formState.errors.password && (
                 <p className className="text-sm text-destructive">
@@ -1134,7 +1141,7 @@ export default function Revenda() {
                 }}
                 value={editForm.watch("planId")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione um plano" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1153,6 +1160,7 @@ export default function Revenda() {
                 id="edit-planValue"
                 value={formatCurrency(selectedPlanValue)}
                 disabled
+                className="w-full"
               />
             </div>
 
@@ -1162,6 +1170,7 @@ export default function Revenda() {
                 id="edit-expiryDate"
                 type="date"
                 {...editForm.register("expiryDate")}
+                className="w-full"
               />
             </div>
 
