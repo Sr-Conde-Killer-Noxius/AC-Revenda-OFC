@@ -586,7 +586,7 @@ export default function Carteira() {
             <div className="space-y-2">
               <Label htmlFor="master">Usuário Master</Label>
               <Select value={selectedMasterId} onValueChange={setSelectedMasterId}>
-                <SelectTrigger className="w-full"> {/* Adicionado w-full */}
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione um master" />
                 </SelectTrigger>
                 <SelectContent>
@@ -608,7 +608,7 @@ export default function Carteira() {
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}
                 placeholder="Ex: 10"
-                className="w-full" {/* Adicionado w-full */}
+                className="w-full"
               />
             </div>
           </div>
@@ -644,7 +644,7 @@ export default function Carteira() {
             <div className="space-y-2">
               <Label htmlFor="remove-master">Usuário Master</Label>
               <Select value={selectedRemoveMasterId} onValueChange={setSelectedRemoveMasterId}>
-                <SelectTrigger className="w-full"> {/* Adicionado w-full */}
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione um master" />
                 </SelectTrigger>
                 <SelectContent>
@@ -666,7 +666,7 @@ export default function Carteira() {
                 value={removeCreditAmount}
                 onChange={(e) => setRemoveCreditAmount(e.target.value)}
                 placeholder="Ex: 5"
-                className="w-full" {/* Adicionado w-full */}
+                className="w-full"
               />
             </div>
           </div>
