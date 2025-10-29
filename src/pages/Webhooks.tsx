@@ -181,7 +181,7 @@ export default function Webhooks() {
                     <Input
                       value={`https://korfuodesmuvloncrpmn.supabase.co/functions/v1/evolution-webhook-receiver`}
                       disabled
-                      className="font-mono text-sm w-full" {/* Adicionado w-full */}
+                      className="font-mono text-sm w-full" /* Adicionado w-full */
                     />
                     <Button
                       variant="outline"
