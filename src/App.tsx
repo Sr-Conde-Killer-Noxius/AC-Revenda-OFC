@@ -38,7 +38,7 @@ const App = () => (
                   <SidebarProvider>
                     <div className="flex min-h-screen w-full">
                       <AppSidebar />
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0"> {/* Adicionado min-w-0 aqui */}
                         <Routes>
                           <Route path="/" element={<Index />} />
                           <Route path="/planos" element={<Planos />} />

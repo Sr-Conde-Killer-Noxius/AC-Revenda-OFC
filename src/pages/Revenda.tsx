@@ -745,7 +745,7 @@ export default function Revenda() {
 
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto"> {/* Adicionado para responsividade da tabela */}
-            <Table>
+            <Table className="min-w-max"> {/* Adicionado min-w-max aqui */}
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
@@ -1116,7 +1116,7 @@ export default function Revenda() {
                 placeholder="••••••••"
               />
               {editForm.formState.errors.password && (
-                <p className="text-sm text-destructive">
+                <p className className="text-sm text-destructive">
                   {editForm.formState.errors.password.message}
                 </p>
               )}
