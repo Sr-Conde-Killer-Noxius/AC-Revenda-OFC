@@ -1,0 +1,1 @@
+ALTER TABLE public.notifications DROP CONSTRAINT notifications_created_by_fkey;

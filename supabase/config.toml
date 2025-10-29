@@ -1,0 +1,8 @@
+[functions.evolution-webhook-receiver]
+verify_jwt = false
+
+[functions.revenda-webhook-listener]
+verify_jwt = false
+
+[functions.delete-subscriber-user]
+verify_jwt = false

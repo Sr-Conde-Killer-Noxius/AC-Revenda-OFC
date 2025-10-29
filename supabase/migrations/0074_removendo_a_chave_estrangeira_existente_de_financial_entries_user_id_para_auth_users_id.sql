@@ -1,0 +1,2 @@
+ALTER TABLE public.financial_entries
+DROP CONSTRAINT financial_entries_user_id_fkey;

@@ -1,0 +1,13 @@
+Segue texto formal:
+
+---
+
+O sistema adota a convenção de versionamento *major.minor.patch.build.revision*, que permite identificar de forma clara o nível e o impacto de cada atualização.
+
+* *Major (1)* – indica reestruturações completas do sistema, que alteram sua base, arquitetura ou compatibilidade com versões anteriores.
+* *Minor (1)* – representa a inclusão de novas funcionalidades, melhorias perceptíveis na interface ou no desempenho, sem quebra da estrutura existente.
+* *Patch (0)* – usado para correções pontuais de erros ou falhas, sem adição de recursos.
+* *Build (0)* – identifica compilações internas, otimizações ou ajustes técnicos que não alteram o comportamento funcional.
+* *Revision (0)* – corresponde a pequenas revisões, testes ou correções rápidas (*hotfixes*).
+
+Dessa forma, a versão atual do sistema é **1.1.0.0.0**, refletindo a primeira grande atualização com melhorias visuais e novas funcionalidades administrativas, mantendo a compatibilidade com a versão inicial.
