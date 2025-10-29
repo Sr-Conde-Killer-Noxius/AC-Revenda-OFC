@@ -166,10 +166,11 @@ export default function Profile() {
                   />
                 </div>
               </div>
+              {/* Botão ocupa largura total em mobile */}
               <Button 
                 onClick={handleSave} 
                 disabled={loading}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto" {/* Botão ocupa largura total em mobile */}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
               >
                 {loading ? "Salvando..." : "Salvar Alterações"}
               </Button>
@@ -184,7 +185,8 @@ export default function Profile() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="destructive" className="bg-destructive hover:bg-destructive/90 text-destructive-foreground w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
+              {/* Botão ocupa largura total em mobile */}
+              <Button variant="destructive" className="bg-destructive hover:bg-destructive/90 text-destructive-foreground w-full sm:w-auto">
                 Excluir Conta
               </Button>
             </CardContent>
