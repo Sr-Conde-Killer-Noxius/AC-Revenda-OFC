@@ -91,14 +91,14 @@ export default function ControlPages() {
     <div className="flex flex-col min-h-screen">
       <AppHeader title="Controle de Acesso às Páginas" />
       
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-4 sm:p-8"> {/* Ajustado padding */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
-              <CardTitle>Gerenciar Permissões de Acesso</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Gerenciar Permissões de Acesso</CardTitle> {/* Ajustado tamanho da fonte */}
             </div>
-            <CardDescription>
+            <CardDescription className="text-sm sm:text-base"> {/* Ajustado tamanho da fonte */}
               Configure quais páginas cada tipo de usuário pode acessar no sistema.
               As alterações serão aplicadas imediatamente após salvar.
             </CardDescription>
@@ -107,31 +107,31 @@ export default function ControlPages() {
           <CardContent>
             <Alert className="mb-6">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
+              <AlertDescription className="text-sm"> {/* Ajustado tamanho da fonte */}
                 <strong>Importante:</strong> A página "Configurações" está sempre disponível para todos os usuários e não pode ser desabilitada.
                 Administradores sempre têm acesso a todas as páginas.
               </AlertDescription>
             </Alert>
 
-            <div className="rounded-md border">
-              <Table>
+            <div className="rounded-md border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+              <Table className="min-w-max"> {/* Adicionado min-w-max */}
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">Página</TableHead>
-                    <TableHead className="text-center">Master</TableHead>
-                    <TableHead className="text-center">Reseller</TableHead>
+                    <TableHead className="w-[40%] whitespace-nowrap">Página</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Master</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Reseller</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {groupedPages && Object.entries(groupedPages).map(([key, page]: [string, any]) => (
                     <TableRow key={key}>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div>
                           <div className="font-medium">{page.title}</div>
                           <div className="text-sm text-muted-foreground">{page.url}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center whitespace-nowrap">
                         {page.master && (
                           <div className="flex items-center justify-center">
                             <Switch
@@ -143,7 +143,7 @@ export default function ControlPages() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center whitespace-nowrap">
                         {page.reseller && (
                           <div className="flex items-center justify-center">
                             <Switch
@@ -162,17 +162,19 @@ export default function ControlPages() {
             </div>
 
             {hasChanges && (
-              <div className="flex justify-end gap-4 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-4 mt-6"> {/* Empilhado em telas pequenas */}
                 <Button
                   variant="outline"
                   onClick={handleReset}
                   disabled={updatePageAccess.isPending}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={updatePageAccess.isPending}
+                  className="w-full sm:w-auto"
                 >
                   {updatePageAccess.isPending ? "Salvando..." : "Salvar Configurações"}
                 </Button>

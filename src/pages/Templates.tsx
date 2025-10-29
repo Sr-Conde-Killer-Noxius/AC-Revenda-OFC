@@ -264,15 +264,15 @@ export default function Templates() {
         subtitle="Gerencie suas mensagens automáticas"
       />
 
-      <main className="container mx-auto p-6">
-        <div className="mb-6 flex justify-between items-center">
+      <main className="container mx-auto p-4 sm:p-6"> {/* Ajustado padding */}
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0"> {/* Ajustado para empilhar em telas pequenas */}
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Templates de Mensagem</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Templates de Mensagem</h2> {/* Ajustado tamanho da fonte */}
+            <p className="text-sm sm:text-base text-muted-foreground"> {/* Ajustado tamanho da fonte */}
               Crie e gerencie templates para notificações automáticas
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
             <Plus className="mr-2 h-4 w-4" />
             Novo Template
           </Button>
@@ -297,7 +297,7 @@ export default function Templates() {
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-foreground">{template.nome}</CardTitle>
+                          <CardTitle className="text-foreground text-lg sm:text-xl">{template.nome}</CardTitle> {/* Ajustado tamanho da fonte */}
                           {template.tipo === "global" && (
                             <Badge variant="secondary">Global</Badge>
                           )}
@@ -342,8 +342,8 @@ export default function Templates() {
             {/* Placeholders Card */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-foreground">Placeholders Disponíveis</CardTitle>
-                <CardDescription className="text-muted-foreground">
+                <CardTitle className="text-foreground text-lg sm:text-xl">Placeholders Disponíveis</CardTitle> {/* Ajustado tamanho da fonte */}
+                <CardDescription className="text-muted-foreground text-sm sm:text-base"> {/* Ajustado tamanho da fonte */}
                   Use estes marcadores em suas mensagens para personalização automática
                 </CardDescription>
               </CardHeader>
@@ -351,10 +351,10 @@ export default function Templates() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {placeholders.map((placeholder) => (
                     <div key={placeholder.code} className="flex items-start gap-3">
-                      <code className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm font-mono">
+                      <code className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs sm:text-sm font-mono"> {/* Ajustado tamanho da fonte */}
                         {placeholder.code}
                       </code>
-                      <span className="text-sm text-foreground">{placeholder.description}</span>
+                      <span className="text-xs sm:text-sm text-foreground">{placeholder.description}</span> {/* Ajustado tamanho da fonte */}
                     </div>
                   ))}
                 </div>
@@ -366,7 +366,7 @@ export default function Templates() {
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Novo Template</DialogTitle>
             <DialogDescription>
@@ -434,16 +434,17 @@ export default function Templates() {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
                 disabled={submitting}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? "Criando..." : "Criar Template"}
               </Button>
             </DialogFooter>
@@ -453,7 +454,7 @@ export default function Templates() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Editar Template</DialogTitle>
             <DialogDescription>
@@ -521,16 +522,17 @@ export default function Templates() {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setEditDialogOpen(false)}
                 disabled={submitting}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
@@ -540,7 +542,7 @@ export default function Templates() {
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
@@ -548,12 +550,12 @@ export default function Templates() {
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+            <AlertDialogCancel disabled={submitting} className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={onDelete}
               disabled={submitting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
             >
               {submitting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>

@@ -98,17 +98,17 @@ export default function Profile() {
         subtitle="Gerencie as informações da sua conta"
       />
 
-      <main className="flex-1 p-6 max-w-4xl">
+      <main className="flex-1 p-4 sm:p-6 max-w-4xl mx-auto w-full"> {/* Ajustado padding e largura máxima */}
         <div className="space-y-6">
           <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-foreground">Informações da Conta</CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardTitle className="text-foreground text-lg sm:text-xl">Informações da Conta</CardTitle> {/* Ajustado tamanho da fonte */}
+              <CardDescription className="text-muted-foreground text-sm sm:text-base"> {/* Ajustado tamanho da fonte */}
                 Atualize suas informações pessoais e de contato
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2"> {/* Grid responsivo */}
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-foreground">Nome</Label>
                   <Input
@@ -141,7 +141,7 @@ export default function Profile() {
                   className="bg-background border-input text-foreground"
                 />
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2"> {/* Grid responsivo */}
                 <div className="space-y-2">
                   <Label htmlFor="cpf" className="text-foreground">
                     CPF <span className="text-destructive">*</span>
@@ -169,7 +169,7 @@ export default function Profile() {
               <Button 
                 onClick={handleSave} 
                 disabled={loading}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto" {/* Botão ocupa largura total em mobile */}
               >
                 {loading ? "Salvando..." : "Salvar Alterações"}
               </Button>
@@ -178,13 +178,13 @@ export default function Profile() {
 
           <Card className="bg-card border-border border-destructive/50">
             <CardHeader>
-              <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardTitle className="text-destructive text-lg sm:text-xl">Zona de Perigo</CardTitle> {/* Ajustado tamanho da fonte */}
+              <CardDescription className="text-muted-foreground text-sm sm:text-base"> {/* Ajustado tamanho da fonte */}
                 Ações irreversíveis para sua conta
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="destructive" className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              <Button variant="destructive" className="bg-destructive hover:bg-destructive/90 text-destructive-foreground w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
                 Excluir Conta
               </Button>
             </CardContent>

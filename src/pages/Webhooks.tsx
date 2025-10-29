@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { JsonViewDialog } from "@/components/JsonViewDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { JsonViewDialog } from "@/components/JsonViewDialog";
+import { Loader2, ExternalLink } from "lucide-react";
+
 interface WebhookConfig {
   config_key: string;
   webhook_url: string;
@@ -136,7 +138,7 @@ export default function Webhooks() {
       <div className="min-h-screen bg-background">
         <AppHeader title="Configuração de Webhooks" subtitle="Gerencie as URLs de webhooks e monitore o histórico de eventos" />
         <div className="flex justify-center items-center h-64">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -149,9 +151,9 @@ export default function Webhooks() {
         subtitle="Gerencie as URLs de webhooks e monitore o histórico de eventos"
       />
 
-      <main className="container mx-auto p-6">
+      <main className="container mx-auto p-4 sm:p-6"> {/* Ajustado padding */}
         <Tabs defaultValue="config" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto"> {/* Ajustado para 2 colunas em mobile */}
             <TabsTrigger value="config">Evolution API</TabsTrigger>
             <TabsTrigger value="qr">NBN QR Code</TabsTrigger>
             <TabsTrigger value="messages">NBN Mensagens</TabsTrigger>
@@ -175,7 +177,7 @@ export default function Webhooks() {
                 </Alert>
                 <div className="space-y-2">
                   <Label>URL do Webhook (Somente Leitura)</Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2"> {/* Empilhado em telas pequenas */}
                     <Input
                       value={`https://korfuodesmuvloncrpmn.supabase.co/functions/v1/evolution-webhook-receiver`}
                       disabled
@@ -187,6 +189,7 @@ export default function Webhooks() {
                         navigator.clipboard.writeText("https://korfuodesmuvloncrpmn.supabase.co/functions/v1/evolution-webhook-receiver");
                         toast({ title: "Copiado!", description: "URL copiada para a área de transferência" });
                       }}
+                      className="w-full sm:w-auto"
                     >
                       Copiar
                     </Button>
@@ -195,14 +198,14 @@ export default function Webhooks() {
 
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Histórico de Requisições (Evolution → Sistema)</h3>
-                  <div className="rounded-lg border">
-                    <Table>
+                  <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+                    <Table className="min-w-max"> {/* Adicionado min-w-max */}
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Data/Hora</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Tipo de Evento</TableHead>
-                          <TableHead>Payload</TableHead>
+                          <TableHead className="whitespace-nowrap">Data/Hora</TableHead>
+                          <TableHead className="whitespace-nowrap">Status</TableHead>
+                          <TableHead className="whitespace-nowrap">Tipo de Evento</TableHead>
+                          <TableHead className="whitespace-nowrap">Payload</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -215,12 +218,12 @@ export default function Webhooks() {
                         ) : (
                           evolutionHistory.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell>{formatDate(item.created_at)}</TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">{formatDate(item.created_at)}</TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <Badge variant="default">{item.status_code || 200}</Badge>
                               </TableCell>
-                              <TableCell>{item.event_type}</TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">{item.event_type}</TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <JsonViewDialog data={item.payload} />
                               </TableCell>
                             </TableRow>
@@ -252,21 +255,21 @@ export default function Webhooks() {
                     placeholder="https://seu-n8n.com/webhook/qr-code"
                   />
                 </div>
-                <Button onClick={handleSave} disabled={saving}>
+                <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
                   <Save className="mr-2 h-4 w-4" />
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
 
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Histórico de Requisições</h3>
-                  <div className="rounded-lg border">
-                    <Table>
+                  <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+                    <Table className="min-w-max"> {/* Adicionado min-w-max */}
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Data/Hora</TableHead>
-                          <TableHead>Instância</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Payload</TableHead>
+                          <TableHead className="whitespace-nowrap">Data/Hora</TableHead>
+                          <TableHead className="whitespace-nowrap">Instância</TableHead>
+                          <TableHead className="whitespace-nowrap">Status</TableHead>
+                          <TableHead className="whitespace-nowrap">Payload</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -279,12 +282,12 @@ export default function Webhooks() {
                         ) : (
                           qrHistory.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell>{formatDate(item.created_at)}</TableCell>
-                              <TableCell>{item.instance_name}</TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">{formatDate(item.created_at)}</TableCell>
+                              <TableCell className="whitespace-nowrap">{item.instance_name}</TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <Badge variant="default">{item.response_status || "N/A"}</Badge>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <JsonViewDialog data={item.response_data ?? item.request_payload} />
                               </TableCell>
                             </TableRow>
@@ -316,22 +319,22 @@ export default function Webhooks() {
                     placeholder="https://seu-n8n.com/webhook/send-message"
                   />
                 </div>
-                <Button onClick={handleSave} disabled={saving}>
+                <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
                   <Save className="mr-2 h-4 w-4" />
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
 
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Histórico de Mensagens Enviadas</h3>
-                  <div className="rounded-lg border">
-                    <Table>
+                  <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+                    <Table className="min-w-max"> {/* Adicionado min-w-max */}
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Data/Hora</TableHead>
-                          <TableHead>Destinatário</TableHead>
-                          <TableHead>Mensagem</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Payload</TableHead>
+                          <TableHead className="whitespace-nowrap">Data/Hora</TableHead>
+                          <TableHead className="whitespace-nowrap">Destinatário</TableHead>
+                          <TableHead className="whitespace-nowrap">Mensagem</TableHead>
+                          <TableHead className="whitespace-nowrap">Status</TableHead>
+                          <TableHead className="whitespace-nowrap">Payload</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -344,13 +347,13 @@ export default function Webhooks() {
                         ) : (
                           messageHistory.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell>{formatDate(item.created_at)}</TableCell>
-                              <TableCell>{item.recipient_phone}</TableCell>
+                              <TableCell className="whitespace-nowrap">{formatDate(item.created_at)}</TableCell>
+                              <TableCell className="whitespace-nowrap">{item.recipient_phone}</TableCell>
                               <TableCell className="max-w-xs truncate">{item.message_text}</TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <Badge variant="default">{item.response_status || "N/A"}</Badge>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <JsonViewDialog data={item.request_payload} />
                               </TableCell>
                             </TableRow>
@@ -382,21 +385,21 @@ export default function Webhooks() {
                     placeholder="https://seu-n8n.com/webhook/logout"
                   />
                 </div>
-                <Button onClick={handleSave} disabled={saving}>
+                <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
                   <Save className="mr-2 h-4 w-4" />
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
 
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Histórico de Desconexões</h3>
-                  <div className="rounded-lg border">
-                    <Table>
+                  <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+                    <Table className="min-w-max"> {/* Adicionado min-w-max */}
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Data/Hora</TableHead>
-                          <TableHead>Instância</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Payload</TableHead>
+                          <TableHead className="whitespace-nowrap">Data/Hora</TableHead>
+                          <TableHead className="whitespace-nowrap">Instância</TableHead>
+                          <TableHead className="whitespace-nowrap">Status</TableHead>
+                          <TableHead className="whitespace-nowrap">Payload</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -409,12 +412,12 @@ export default function Webhooks() {
                         ) : (
                           logoutHistory.map((item) => (
                             <TableRow key={item.id}>
-                              <TableCell>{formatDate(item.created_at)}</TableCell>
-                              <TableCell>{item.instance_name}</TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">{formatDate(item.created_at)}</TableCell>
+                              <TableCell className="whitespace-nowrap">{item.instance_name}</TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <Badge variant="default">{item.response_status || "N/A"}</Badge>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <JsonViewDialog data={item.request_payload} />
                               </TableCell>
                             </TableRow>

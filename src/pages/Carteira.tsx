@@ -316,7 +316,7 @@ export default function Carteira() {
     <div className="min-h-screen bg-background">
       <AppHeader title="Carteira de Créditos" />
 
-      <main className="container mx-auto p-6 space-y-6">
+      <main className="container mx-auto p-4 sm:p-6 space-y-6"> {/* Ajustado padding */}
         {/* Saldo Card */}
         <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
           <CardHeader>
@@ -332,17 +332,18 @@ export default function Carteira() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-bold text-primary">
+              <span className="text-4xl sm:text-5xl font-bold text-primary"> {/* Ajustado tamanho da fonte */}
                 {userRole === 'admin' ? '∞' : creditBalance ?? 0}
               </span>
-              <span className="text-xl text-muted-foreground">
+              <span className="text-lg sm:text-xl text-muted-foreground"> {/* Ajustado tamanho da fonte */}
                 {userRole === 'admin' ? 'Ilimitado' : 'créditos'}
               </span>
             </div>
             {userRole === 'admin' && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 mt-4"> {/* Empilhado em telas pequenas */}
                 <Button 
                   onClick={() => setAddCreditsDialogOpen(true)}
+                  className="w-full sm:w-auto"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Adicionar Créditos a Master
@@ -350,6 +351,7 @@ export default function Carteira() {
                 <Button 
                   onClick={() => setRemoveCreditsDialogOpen(true)}
                   variant="destructive"
+                  className="w-full sm:w-auto"
                 >
                   <Coins className="mr-2 h-4 w-4" />
                   Remover Créditos de Master
@@ -372,15 +374,15 @@ export default function Carteira() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border">
-                <Table>
+              <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+                <Table className="min-w-max"> {/* Adicionado min-w-max */}
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Administrador</TableHead>
-                      <TableHead>Ação/Descrição</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead className="text-right">Saldo Após</TableHead>
+                      <TableHead className="whitespace-nowrap">Data</TableHead>
+                      <TableHead className="whitespace-nowrap">Administrador</TableHead>
+                      <TableHead className="whitespace-nowrap">Ação/Descrição</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Quantidade</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Saldo Após</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -408,19 +410,19 @@ export default function Carteira() {
                         
                         return (
                           <TableRow key={transaction.id}>
-                            <TableCell>
+                            <TableCell className="whitespace-nowrap">
                               {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
                             </TableCell>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium whitespace-nowrap">
                               {transaction.admin_profile?.full_name || 'N/A'}
                             </TableCell>
-                            <TableCell>{actionText}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="whitespace-nowrap">{actionText}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap">
                               <Badge variant={isAddition ? "default" : "destructive"} className={isAddition ? "bg-green-600" : ""}>
                                 {isAddition ? `+${transaction.amount}` : transaction.amount}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right font-medium">
+                            <TableCell className="text-right font-medium whitespace-nowrap">
                               {transaction.balance_after}
                             </TableCell>
                           </TableRow>
@@ -447,14 +449,14 @@ export default function Carteira() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border">
-                <Table>
+              <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+                <Table className="min-w-max"> {/* Adicionado min-w-max */}
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                      <TableHead className="text-right">Saldo Após</TableHead>
+                      <TableHead className="whitespace-nowrap">Data</TableHead>
+                      <TableHead className="whitespace-nowrap">Descrição</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Quantidade</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Saldo Após</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -475,11 +477,11 @@ export default function Carteira() {
                     ) : (
                       creditedTransactions.map((transaction) => (
                         <TableRow key={transaction.id}>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
                           </TableCell>
-                          <TableCell>{transaction.description}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="whitespace-nowrap">{transaction.description}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
                             <Badge 
                               variant={transaction.amount > 0 ? "default" : "destructive"} 
                               className={transaction.amount > 0 ? "bg-green-600" : ""}
@@ -487,7 +489,7 @@ export default function Carteira() {
                               {transaction.amount > 0 ? `+${transaction.amount}` : transaction.amount}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium whitespace-nowrap">
                             {transaction.balance_after}
                           </TableCell>
                         </TableRow>
@@ -514,15 +516,15 @@ export default function Carteira() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border">
-              <Table>
+            <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+              <Table className="min-w-max"> {/* Adicionado min-w-max */}
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Ação/Descrição</TableHead>
-                    {userRole === 'admin' && <TableHead>Master</TableHead>}
-                    <TableHead className="text-right">Quantidade</TableHead>
-                    <TableHead className="text-right">Saldo Após</TableHead>
+                    <TableHead className="whitespace-nowrap">Data</TableHead>
+                    <TableHead className="whitespace-nowrap">Ação/Descrição</TableHead>
+                    {userRole === 'admin' && <TableHead className="whitespace-nowrap">Master</TableHead>}
+                    <TableHead className="text-right whitespace-nowrap">Quantidade</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Saldo Após</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -543,21 +545,21 @@ export default function Carteira() {
                   ) : (
                     spentTransactions.map((transaction) => (
                       <TableRow key={transaction.id}>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
                         </TableCell>
-                        <TableCell>{transaction.description}</TableCell>
+                        <TableCell className="whitespace-nowrap">{transaction.description}</TableCell>
                         {userRole === 'admin' && (
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-muted-foreground whitespace-nowrap">
                             {transaction.master_profile?.full_name || 'N/A'}
                           </TableCell>
                         )}
-                        <TableCell className="text-right">
+                        <TableCell className="text-right whitespace-nowrap">
                           <Badge variant="destructive">
                             {transaction.amount}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className="text-right font-medium whitespace-nowrap">
                           {transaction.balance_after}
                         </TableCell>
                       </TableRow>
@@ -572,7 +574,7 @@ export default function Carteira() {
 
       {/* Add Credits Dialog (Admin only) */}
       <Dialog open={addCreditsDialogOpen} onOpenChange={setAddCreditsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Adicionar Créditos</DialogTitle>
             <DialogDescription>
@@ -610,16 +612,17 @@ export default function Carteira() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
             <Button
               type="button"
               variant="outline"
               onClick={() => setAddCreditsDialogOpen(false)}
               disabled={submitting}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
-            <Button onClick={handleAddCredits} disabled={submitting}>
+            <Button onClick={handleAddCredits} disabled={submitting} className="w-full sm:w-auto">
               {submitting ? "Adicionando..." : "Adicionar Créditos"}
             </Button>
           </DialogFooter>
@@ -628,7 +631,7 @@ export default function Carteira() {
 
       {/* Remove Credits Dialog (Admin only) */}
       <Dialog open={removeCreditsDialogOpen} onOpenChange={setRemoveCreditsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Remover Créditos</DialogTitle>
             <DialogDescription>
@@ -666,12 +669,13 @@ export default function Carteira() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
             <Button
               type="button"
               variant="outline"
               onClick={() => setRemoveCreditsDialogOpen(false)}
               disabled={submitting}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
@@ -679,6 +683,7 @@ export default function Carteira() {
               onClick={handleRemoveCredits} 
               disabled={submitting}
               variant="destructive"
+              className="w-full sm:w-auto"
             >
               {submitting ? "Removendo..." : "Remover Créditos"}
             </Button>

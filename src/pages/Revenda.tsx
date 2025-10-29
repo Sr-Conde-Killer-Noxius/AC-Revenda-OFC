@@ -729,15 +729,15 @@ export default function Revenda() {
     <div className="min-h-screen bg-background">
       <AppHeader title="Gerenciar Revendedores" />
 
-      <main className="container mx-auto p-6">
-        <div className="mb-6 flex justify-between items-center">
+      <main className="container mx-auto p-4 sm:p-6"> {/* Ajustado padding */}
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0"> {/* Ajustado para empilhar em telas pequenas */}
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Revendedores</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Revendedores</h2> {/* Ajustado tamanho da fonte */}
+            <p className="text-sm sm:text-base text-muted-foreground"> {/* Ajustado tamanho da fonte */}
               Gerencie os revendedores do sistema
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
             <Plus className="mr-2 h-4 w-4" />
             Novo Revendedor
           </Button>
@@ -748,17 +748,17 @@ export default function Revenda() {
             <Table className="min-w-max"> {/* Adicionado min-w-max aqui */}
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Nível</TableHead>
-                  {userRole === 'admin' && <TableHead>Abaixo de</TableHead>}
-                  <TableHead>Plano</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Vencimento do Crédito</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="whitespace-nowrap">Nome</TableHead>
+                  <TableHead className="whitespace-nowrap">E-mail</TableHead>
+                  <TableHead className="whitespace-nowrap">Telefone</TableHead>
+                  <TableHead className="whitespace-nowrap">Nível</TableHead>
+                  {userRole === 'admin' && <TableHead className="whitespace-nowrap">Abaixo de</TableHead>}
+                  <TableHead className="whitespace-nowrap">Plano</TableHead>
+                  <TableHead className="whitespace-nowrap">Valor</TableHead>
+                  <TableHead className="whitespace-nowrap">Vencimento</TableHead>
+                  <TableHead className="whitespace-nowrap">Vencimento do Crédito</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -779,12 +779,12 @@ export default function Revenda() {
                 ) : (
                   resellers.map((reseller) => (
                     <TableRow key={reseller.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium whitespace-nowrap">
                         {reseller.full_name || "N/A"}
                       </TableCell>
-                      <TableCell>{reseller.email || "N/A"}</TableCell>
-                      <TableCell>{reseller.phone || "N/A"}</TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">{reseller.email || "N/A"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{reseller.phone || "N/A"}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge
                           variant={
                             reseller.role === "admin"
@@ -802,7 +802,7 @@ export default function Revenda() {
                         </Badge>
                       </TableCell>
                       {userRole === 'admin' && (
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Select
                             value={reseller.created_by || ""}
                             onValueChange={(value) => updateCreator(reseller.user_id, value)}
@@ -825,24 +825,24 @@ export default function Revenda() {
                           </Select>
                         </TableCell>
                       )}
-                      <TableCell>{reseller.planos?.nome || "N/A"}</TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">{reseller.planos?.nome || "N/A"}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {reseller.planos?.valor 
                           ? formatCurrency(reseller.planos.valor)
                           : "N/A"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {reseller.expiry_date 
                           ? new Date(reseller.expiry_date).toLocaleDateString("pt-BR")
                           : "N/A"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {reseller.credit_expiry_date 
                           ? new Date(reseller.credit_expiry_date).toLocaleDateString("pt-BR")
                           : "N/A"}
                       </TableCell>
-                      <TableCell>{getStatusBadge(reseller.status)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="whitespace-nowrap">{getStatusBadge(reseller.status)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -956,7 +956,7 @@ export default function Revenda() {
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Novo Revendedor</DialogTitle>
             <DialogDescription>
@@ -1035,16 +1035,17 @@ export default function Revenda() {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
                 disabled={submitting}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? "Criando..." : "Criar Revendedor"}
               </Button>
             </DialogFooter>
@@ -1054,7 +1055,7 @@ export default function Revenda() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Editar Revendedor</DialogTitle>
             <DialogDescription>
@@ -1163,16 +1164,17 @@ export default function Revenda() {
               />
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setEditDialogOpen(false)}
                 disabled={submitting}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </DialogFooter>
@@ -1182,7 +1184,7 @@ export default function Revenda() {
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1190,12 +1192,12 @@ export default function Revenda() {
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+            <AlertDialogCancel disabled={submitting} className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={onDelete}
               disabled={submitting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
             >
               {submitting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
@@ -1205,7 +1207,7 @@ export default function Revenda() {
 
       {/* Renew Credit Dialog */}
       <AlertDialog open={renewDialogOpen} onOpenChange={setRenewDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Renovar Revenda</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1225,11 +1227,12 @@ export default function Revenda() {
                 : "Não definido"}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={renewingCredit}>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+            <AlertDialogCancel disabled={renewingCredit} className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={onRenewCredit}
               disabled={renewingCredit}
+              className="w-full sm:w-auto"
             >
               {renewingCredit ? "Renovando..." : "Renovar"}
             </AlertDialogAction>

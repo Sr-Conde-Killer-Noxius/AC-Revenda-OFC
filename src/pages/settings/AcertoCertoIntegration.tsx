@@ -116,10 +116,10 @@ export default function AcertoCertoIntegration() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader title="Integração Acerto Certo" />
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 sm:p-6 space-y-6"> {/* Ajustado padding */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Integração Acerto Certo</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Integração Acerto Certo</h1> {/* Ajustado tamanho da fonte */}
+          <p className="text-sm sm:text-base text-muted-foreground mt-2"> {/* Ajustado tamanho da fonte */}
             Configure o webhook para sincronizar usuários com o sistema Acerto Certo
           </p>
         </div>
@@ -189,16 +189,16 @@ export default function AcertoCertoIntegration() {
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
             ) : history && history.length > 0 ? (
-              <div className="rounded-md border">
-                <Table>
+              <div className="rounded-md border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+                <Table className="min-w-max"> {/* Adicionado min-w-max */}
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Enviado em</TableHead>
-                      <TableHead>Tipo Evento</TableHead>
-                      <TableHead>URL Destino</TableHead>
-                      <TableHead>Status Resposta</TableHead>
-                      <TableHead>Payload</TableHead>
-                      <TableHead>Resposta</TableHead>
+                      <TableHead className="whitespace-nowrap">Enviado em</TableHead>
+                      <TableHead className="whitespace-nowrap">Tipo Evento</TableHead>
+                      <TableHead className="whitespace-nowrap">URL Destino</TableHead>
+                      <TableHead className="whitespace-nowrap">Status Resposta</TableHead>
+                      <TableHead className="whitespace-nowrap">Payload</TableHead>
+                      <TableHead className="whitespace-nowrap">Resposta</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -207,7 +207,7 @@ export default function AcertoCertoIntegration() {
                         <TableCell className="whitespace-nowrap">
                           {new Date(item.sent_at).toLocaleString('pt-BR')}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Badge variant="outline">
                             {item.event_type === 'create_user' 
                               ? 'Criar Usuário' 
@@ -216,7 +216,7 @@ export default function AcertoCertoIntegration() {
                               : 'Atualizar Status'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="max-w-xs truncate">
+                        <TableCell className="max-w-[150px] truncate"> {/* Ajustado max-w para truncar */}
                           <a 
                             href={item.target_url} 
                             target="_blank" 
@@ -224,20 +224,20 @@ export default function AcertoCertoIntegration() {
                             className="flex items-center gap-1 text-primary hover:underline"
                           >
                             {item.target_url}
-                            <ExternalLink className="h-3 w-3" />
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" /> {/* flex-shrink-0 para evitar que o ícone encolha */}
                           </a>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {getStatusBadge(item.response_status_code)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <JsonViewDialog 
                             data={item.payload} 
                             triggerLabel="Ver Payload"
                             title="Payload Enviado"
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {item.response_body ? (
                             <JsonViewDialog 
                               data={item.response_body} 

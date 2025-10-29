@@ -255,27 +255,27 @@ export default function Planos() {
         subtitle="Gerencie os planos disponíveis para seus clientes"
       />
 
-      <main className="container mx-auto p-6">
-        <div className="mb-6 flex justify-between items-center">
+      <main className="container mx-auto p-4 sm:p-6"> {/* Ajustado padding */}
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0"> {/* Ajustado para empilhar em telas pequenas */}
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Planos</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Planos</h2> {/* Ajustado tamanho da fonte */}
+            <p className="text-sm sm:text-base text-muted-foreground"> {/* Ajustado tamanho da fonte */}
               Gerencie os planos do sistema
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto"> {/* Botão ocupa largura total em mobile */}
             <Plus className="mr-2 h-4 w-4" />
             Novo Plano
           </Button>
         </div>
 
-        <div className="rounded-lg border bg-card">
-          <Table>
+        <div className="rounded-lg border bg-card overflow-x-auto"> {/* Adicionado overflow-x-auto */}
+          <Table className="min-w-max"> {/* Adicionado min-w-max */}
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="whitespace-nowrap">Nome</TableHead>
+                <TableHead className="whitespace-nowrap">Valor</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -296,11 +296,11 @@ export default function Planos() {
               ) : (
                 planos.map((plano) => (
                   <TableRow key={plano.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium whitespace-nowrap">
                       {plano.nome}
                     </TableCell>
-                    <TableCell>{formatCurrency(plano.valor)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="whitespace-nowrap">{formatCurrency(plano.valor)}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
                       <div className="flex justify-end gap-2">
                         <Button 
                           variant="ghost" 
@@ -328,7 +328,7 @@ export default function Planos() {
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Novo Plano</DialogTitle>
             <DialogDescription>
@@ -367,16 +367,17 @@ export default function Planos() {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
                 disabled={submitting}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? "Criando..." : "Criar Plano"}
               </Button>
             </DialogFooter>
@@ -386,7 +387,7 @@ export default function Planos() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Editar Plano</DialogTitle>
             <DialogDescription>
@@ -425,16 +426,17 @@ export default function Planos() {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setEditDialogOpen(false)}
                 disabled={submitting}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
@@ -444,7 +446,7 @@ export default function Planos() {
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
@@ -453,12 +455,12 @@ export default function Planos() {
               plano terão o campo de plano definido como vazio.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+            <AlertDialogCancel disabled={submitting} className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={onDelete}
               disabled={submitting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
             >
               {submitting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>

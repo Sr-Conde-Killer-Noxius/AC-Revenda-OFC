@@ -292,10 +292,10 @@ export default function WhatsAppConnection() {
         subtitle="Gerencie a integração do seu sistema com o WhatsApp"
       />
 
-      <main className="container mx-auto p-6 max-w-2xl">
+      <main className="container mx-auto p-4 sm:p-6 max-w-2xl"> {/* Ajustado padding */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0"> {/* Empilhado em telas pequenas */}
               <div>
                 <CardTitle>Conexão com WhatsApp</CardTitle>
                 <CardDescription>
@@ -332,7 +332,7 @@ export default function WhatsAppConnection() {
                   <img 
                     src={`data:image/png;base64,${qrCodeBase64}`}
                     alt="QR Code WhatsApp"
-                    className="w-80 h-80"
+                    className="w-64 h-64 sm:w-80 sm:h-80 object-contain" // Ajustado tamanho para mobile
                   />
                 </div>
                 <p className="text-sm text-center text-muted-foreground">
