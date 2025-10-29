@@ -44,7 +44,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
   
   // Páginas sempre disponíveis (não precisam estar na tabela de controle)
-  const alwaysAllowed = ['/', '/configuracoes'];
+  const alwaysAllowed = ['/', '/profile']; // Updated to /profile
   
   // Se for master ou reseller
   if (userRole === 'master' || userRole === 'reseller') {

@@ -3,14 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
-export default function Configuracoes() {
+export default function Profile() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -29,7 +28,7 @@ export default function Configuracoes() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, email, cpf, pix_key')
+        .select('full_name, email, cpf, pix_key, phone')
         .eq('user_id', user.id)
         .single();
 
@@ -38,6 +37,7 @@ export default function Configuracoes() {
       if (data) {
         setFullName(data.full_name || "");
         setEmail(data.email || "");
+        setPhone(data.phone || "");
         setCpf(data.cpf || "");
         setPixKey(data.pix_key || "");
       }
@@ -75,7 +75,8 @@ export default function Configuracoes() {
           full_name: fullName,
           email: email,
           cpf: cpfNumeros,
-          pix_key: pixKey
+          pix_key: pixKey,
+          phone: phone,
         })
         .eq('user_id', user.id);
 
@@ -93,8 +94,8 @@ export default function Configuracoes() {
   return (
     <div className="flex flex-col min-h-screen">
       <AppHeader
-        title="Configurações"
-        subtitle="Gerencie as configurações da sua conta"
+        title="Meu Perfil"
+        subtitle="Gerencie as informações da sua conta"
       />
 
       <main className="flex-1 p-6 max-w-4xl">
@@ -172,46 +173,6 @@ export default function Configuracoes() {
               >
                 {loading ? "Salvando..." : "Salvar Alterações"}
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground">Notificações</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Configure como deseja receber notificações
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-foreground">Novos Clientes</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receber notificação quando um novo cliente for cadastrado
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator className="bg-border" />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-foreground">Pagamentos</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receber notificação sobre pagamentos recebidos
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator className="bg-border" />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-foreground">Relatórios</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receber relatórios semanais por e-mail
-                  </p>
-                </div>
-                <Switch />
-              </div>
             </CardContent>
           </Card>
 

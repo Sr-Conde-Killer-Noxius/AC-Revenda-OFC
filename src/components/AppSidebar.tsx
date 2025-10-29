@@ -1,4 +1,4 @@
-import { Home, Package, Settings, LogOut, UsersRound, MessageSquare, Webhook, MessageCircle, Link2, Wallet, Shield } from "lucide-react";
+import { Home, Package, Settings, LogOut, UsersRound, MessageSquare, Webhook, MessageCircle, Link2, Wallet, Shield, User } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAllPageAccess } from "@/hooks/usePageAccessControl";
 
 const allMenuItems = [
+  { title: "Meu Perfil", url: "/profile", icon: User }, // Moved to first position and updated
   { title: "Revenda", url: "/revenda", icon: UsersRound },
   { title: "Planos", url: "/planos", icon: Package },
   { title: "Carteira", url: "/carteira", icon: Wallet },
@@ -25,7 +26,7 @@ const allMenuItems = [
   { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
   { title: "Webhooks", url: "/webhooks", icon: Webhook },
   { title: "Acerto Certo", url: "/settings/acerto-certo-integration", icon: Link2 },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
+  // Removed "Configurações" as it's now "Meu Perfil"
 ];
 
 export function AppSidebar() {
@@ -46,8 +47,8 @@ export function AppSidebar() {
     if (userRole === 'master' || userRole === 'reseller') {
       const allowedUrls = allowedPages.map((p) => p.page_url);
       
-      // Configurações sempre disponível
-      const alwaysAvailable = ['/configuracoes'];
+      // Meu Perfil sempre disponível
+      const alwaysAvailable = ['/profile'];
       
       return allMenuItems.filter((item) => 
         alwaysAvailable.includes(item.url) || allowedUrls.includes(item.url)

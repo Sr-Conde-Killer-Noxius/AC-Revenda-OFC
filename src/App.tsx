@@ -9,7 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Planos from "./pages/Planos";
-import Configuracoes from "./pages/Configuracoes";
+import Profile from "./pages/Profile"; // Updated import
 import Revenda from "./pages/Revenda";
 import Carteira from "./pages/Carteira";
 import Templates from "./pages/Templates";
@@ -48,7 +48,7 @@ const App = () => (
                           <Route path="/whatsapp" element={<WhatsAppConnection />} />
                           <Route path="/webhooks" element={<Webhooks />} />
                           <Route path="/settings/acerto-certo-integration" element={<AcertoCertoIntegration />} />
-                          <Route path="/configuracoes" element={<Configuracoes />} />
+                          <Route path="/profile" element={<Profile />} /> {/* Updated route */}
                           <Route path="/controlepages" element={<ControlPages />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

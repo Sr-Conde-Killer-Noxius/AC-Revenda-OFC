@@ -11,7 +11,7 @@ export default function Index() {
     if (userRole === 'admin' || userRole === 'master') {
       navigate('/revenda', { replace: true });
     } else if (userRole === 'reseller') {
-      navigate('/configuracoes', { replace: true });
+      navigate('/profile', { replace: true }); // Updated redirect to /profile
     }
   }, [userRole, navigate]);
 
