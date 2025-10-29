@@ -343,8 +343,8 @@ export default function Planos() {
                 id="nome"
                 {...form.register("nome")}
                 placeholder="Ex: Básico, Intermediário, Premium"
-                className="w-full" {/* Adicionado w-full */}
-              />
+                className="w-full"
+              /> {/* Adicionado w-full */}
               {form.formState.errors.nome && (
                 <p className="text-sm text-destructive">
                   {form.formState.errors.nome.message}
@@ -360,8 +360,8 @@ export default function Planos() {
                 step="0.01"
                 {...form.register("valor")}
                 placeholder="0.00"
-                className="w-full" {/* Adicionado w-full */}
-              />
+                className="w-full"
+              /> {/* Adicionado w-full */}
               {form.formState.errors.valor && (
                 <p className="text-sm text-destructive">
                   {form.formState.errors.valor.message}
@@ -404,8 +404,8 @@ export default function Planos() {
                 id="edit-nome"
                 {...editForm.register("nome")}
                 placeholder="Ex: Básico, Intermediário, Premium"
-                className="w-full" {/* Adicionado w-full */}
-              />
+                className="w-full"
+              /> {/* Adicionado w-full */}
               {editForm.formState.errors.nome && (
                 <p className="text-sm text-destructive">
                   {editForm.formState.errors.nome.message}
@@ -421,8 +421,8 @@ export default function Planos() {
                 step="0.01"
                 {...editForm.register("valor")}
                 placeholder="0.00"
-                className="w-full" {/* Adicionado w-full */}
-              />
+                className="w-full"
+              /> {/* Adicionado w-full */}
               {editForm.formState.errors.valor && (
                 <p className="text-sm text-destructive">
                   {editForm.formState.errors.valor.message}
