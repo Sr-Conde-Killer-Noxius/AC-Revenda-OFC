@@ -1,2 +1,0 @@
-ALTER TABLE public.scheduled_notifications
-ADD COLUMN client_name_snapshot TEXT;

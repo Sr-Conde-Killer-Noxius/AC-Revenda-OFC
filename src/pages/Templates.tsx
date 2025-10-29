@@ -1,161 +1,565 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { Plus, Edit, Trash2, MoreVertical, MessageSquare } from "lucide-react";
+import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
-import { TemplateDialog } from "@/components/templates/TemplateDialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useTemplates, Template } from "@/hooks/useTemplates"; // Importar Template do hook useTemplates
-import { useAuth } from "@/contexts/AuthContext"; // Importar useAuth
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const templateSchema = z.object({
+  nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100, "Nome deve ter no máximo 100 caracteres"),
+  assunto: z.string().max(200, "Assunto deve ter no máximo 200 caracteres").optional(),
+  corpo: z.string().min(10, "Corpo deve ter no mínimo 10 caracteres").max(2000, "Corpo deve ter no máximo 2000 caracteres"),
+  tipo: z.enum(["global", "pessoal"]),
+});
+
+type TemplateFormData = z.infer<typeof templateSchema>;
+
+interface Template {
+  id: string;
+  nome: string;
+  assunto: string | null;
+  corpo: string;
+  tipo: string;
+  created_at: string;
+}
+
+const placeholders = [
+  { code: "{{customer_name}}", description: "Nome do cliente" },
+  { code: "{{plan_name}}", description: "Nome do plano" },
+  { code: "{{due_date}}", description: "Data de vencimento" },
+  { code: "{{value}}", description: "Valor da cobrança" },
+  { code: "{{pix_key}}", description: "Chave PIX do seu perfil" },
+];
 
 export default function Templates() {
-  const { user, role } = useAuth(); // Obter user e role do AuthContext
-  const { data: templates, isLoading, error } = useTemplates();
-  // Removed: const deleteTemplateMutation = useDeleteTemplate(); // Usar o hook de delete
-
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (error) {
-      toast.error("Erro ao carregar templates", { description: "Não foi possível carregar os templates. Verifique sua conexão ou tente mais tarde." });
+  const form = useForm<TemplateFormData>({
+    resolver: zodResolver(templateSchema),
+    defaultValues: {
+      nome: "",
+      assunto: "",
+      corpo: "",
+      tipo: "global",
+    },
+  });
+
+  const editForm = useForm<TemplateFormData>({
+    resolver: zodResolver(templateSchema),
+    defaultValues: {
+      nome: "",
+      assunto: "",
+      corpo: "",
+      tipo: "global",
+    },
+  });
+
+  const loadTemplates = async () => {
+    try {
+      setLoading(true);
+      
+      // Load templates (RLS handles filtering: user's own + global templates)
+      const { data, error } = await supabase
+        .from("templates")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setTemplates(data || []);
+    } catch (error: any) {
+      console.error("Error loading templates:", error);
+      toast({
+        title: "Erro ao carregar templates",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [error]);
-
-  const handleOpenDialog = (template?: Template) => {
-    setSelectedTemplate(template || null);
-    setDialogOpen(true);
   };
 
-  // REMOVIDO: getCategoryLabel e getCategoryColor
+  useEffect(() => {
+    loadTemplates();
+  }, []);
 
-  const canEditOrDelete = (template: Template) => {
-    if (!user) return false;
-    // Admins podem editar/deletar qualquer template
-    if (role === 'admin') return true;
-    // Usuário comum só pode editar/deletar seus próprios templates E que sejam do tipo 'normal'
-    return template.user_id === user.id && template.type === 'normal';
+  const onSubmit = async (data: TemplateFormData) => {
+    try {
+      setSubmitting(true);
+
+      const { error } = await supabase
+        .from("templates")
+        .insert({
+          nome: data.nome,
+          assunto: data.assunto || null,
+          corpo: data.corpo,
+          tipo: data.tipo,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Template criado com sucesso!",
+        description: `${data.nome} foi adicionado ao sistema.`,
+      });
+
+      setDialogOpen(false);
+      form.reset();
+      loadTemplates();
+    } catch (error: any) {
+      console.error("Error creating template:", error);
+      toast({
+        title: "Erro ao criar template",
+        description: error.message || "Ocorreu um erro ao criar o template",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onEdit = async (data: TemplateFormData) => {
+    if (!selectedTemplate) return;
+
+    try {
+      setSubmitting(true);
+
+      const { error } = await supabase
+        .from("templates")
+        .update({
+          nome: data.nome,
+          assunto: data.assunto || null,
+          corpo: data.corpo,
+          tipo: data.tipo,
+        })
+        .eq("id", selectedTemplate.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Template atualizado com sucesso!",
+        description: `${data.nome} foi atualizado.`,
+      });
+
+      setEditDialogOpen(false);
+      editForm.reset();
+      loadTemplates();
+    } catch (error: any) {
+      console.error("Error updating template:", error);
+      toast({
+        title: "Erro ao atualizar template",
+        description: error.message || "Ocorreu um erro ao atualizar o template",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async () => {
+    if (!selectedTemplate) return;
+
+    try {
+      setSubmitting(true);
+
+      const { error } = await supabase
+        .from("templates")
+        .delete()
+        .eq("id", selectedTemplate.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Template excluído com sucesso!",
+        description: `${selectedTemplate.nome} foi removido do sistema.`,
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedTemplate(null);
+      loadTemplates();
+    } catch (error: any) {
+      console.error("Error deleting template:", error);
+      toast({
+        title: "Erro ao excluir template",
+        description: error.message || "Ocorreu um erro ao excluir o template",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEdit = (template: Template) => {
+    setSelectedTemplate(template);
+    editForm.reset({
+      nome: template.nome,
+      assunto: template.assunto || "",
+      corpo: template.corpo,
+      tipo: template.tipo as "global" | "pessoal",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = (template: Template) => {
+    setSelectedTemplate(template);
+    setDeleteDialogOpen(true);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Templates</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">Gerencie suas mensagens automáticas</p>
-        </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
-          <Plus className="h-4 w-4" />
-          Novo Template
-        </Button>
-      </div>
+    <div className="min-h-screen bg-background">
+      <AppHeader 
+        title="Templates" 
+        subtitle="Gerencie suas mensagens automáticas"
+      />
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="border-border bg-card">
-              <CardHeader>
-                <div className="h-6 bg-muted rounded w-3/4 animate-pulse" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="h-4 bg-muted rounded w-full animate-pulse" />
-                <div className="h-4 bg-muted rounded w-2/3 animate-pulse" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (templates || []).length === 0 ? (
-        <Card className="border-border bg-card">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground text-center text-sm">
-              Nenhum template cadastrado. Crie seu primeiro template!
+      <main className="container mx-auto p-6">
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Templates de Mensagem</h2>
+            <p className="text-muted-foreground">
+              Crie e gerencie templates para notificações automáticas
             </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {(templates || []).map((template: Template) => (
-            <Card
-              key={template.id}
-              className={`border-border bg-card hover:shadow-md transition-shadow ${canEditOrDelete(template) ? 'cursor-pointer' : 'cursor-not-allowed opacity-80'}`}
-              onClick={() => canEditOrDelete(template) && handleOpenDialog(template)}
-            >
+          </div>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Template
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 mb-6">
+              {templates.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    Nenhum template encontrado. Crie seu primeiro template!
+                  </CardContent>
+                </Card>
+              ) : (
+                templates.map((template) => (
+                  <Card key={template.id} className="bg-card border-border">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-foreground">{template.nome}</CardTitle>
+                          {template.tipo === "global" && (
+                            <Badge variant="secondary">Global</Badge>
+                          )}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(template)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDelete(template)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {template.assunto && (
+                        <p className="text-sm text-muted-foreground mb-2">
+                          <strong>Assunto:</strong> {template.assunto}
+                        </p>
+                      )}
+                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                        {template.corpo}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+
+            {/* Placeholders Card */}
+            <Card className="bg-card border-border">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-base sm:text-lg">{template.name}</CardTitle>
-                  <div className="flex gap-2 items-center">
-                    {template.user_id === null && (
-                      <Badge variant="secondary" className="bg-blue-800/20 text-blue-300 text-xs">Padrão</Badge>
-                    )}
-                    {template.type === 'global' && (
-                      <Badge variant="secondary" className="bg-purple-800/20 text-purple-300 text-xs">Global</Badge>
-                    )}
-                    {role === 'admin' && template.creatorName && template.user_id !== null && ( // Exibir nome do criador APENAS para admins
-                      <Badge variant="secondary" className="bg-gray-800/20 text-gray-300 text-xs">
-                        {template.creatorName}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                <CardTitle className="text-foreground">Placeholders Disponíveis</CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Use estes marcadores em suas mensagens para personalização automática
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <CardDescription className="line-clamp-3 text-sm">
-                  {template.content}
-                </CardDescription>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {placeholders.map((placeholder) => (
+                    <div key={placeholder.code} className="flex items-start gap-3">
+                      <code className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm font-mono">
+                        {placeholder.code}
+                      </code>
+                      <span className="text-sm text-foreground">{placeholder.description}</span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          </>
+        )}
+      </main>
 
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Placeholders Disponíveis</CardTitle>
-          <CardDescription className="text-sm">
-            Use estes marcadores em suas mensagens para personalização automática
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 md:grid-cols-2">
-            <div className="flex items-center gap-2">
-              <code className="px-2 py-1 rounded bg-muted text-xs sm:text-sm">
-                {"{{customer_name}}"}
-              </code>
-              <span className="text-xs sm:text-sm text-muted-foreground">Nome do cliente</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="px-2 py-1 rounded bg-muted text-xs sm:text-sm">
-                {"{{plan_name}}"}
-              </code>
-              <span className="text-xs sm:text-sm text-muted-foreground">Nome do plano</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="px-2 py-1 rounded bg-muted text-xs sm:text-sm">
-                {"{{due_date}}"}
-              </code>
-              <span className="text-xs sm:text-sm text-muted-foreground">Data de vencimento</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="px-2 py-1 rounded bg-muted text-xs sm:text-sm">
-                {"{{value}}"}
-              </code>
-              <span className="text-xs sm:text-sm text-muted-foreground">Valor da cobrança</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="px-2 py-1 rounded bg-muted text-xs sm:text-sm">
-                {"{{pix_key}}"}
-              </code>
-              <span className="text-xs sm:text-sm text-muted-foreground">Chave PIX do seu perfil</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Create Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Template</DialogTitle>
+            <DialogDescription>
+              Crie um novo template de mensagem
+            </DialogDescription>
+          </DialogHeader>
 
-      <TemplateDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        template={selectedTemplate}
-      />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome do Template</Label>
+              <Input
+                id="nome"
+                {...form.register("nome")}
+                placeholder="Ex: Lembrete de Vencimento"
+              />
+              {form.formState.errors.nome && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.nome.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipo">Tipo</Label>
+              <Select
+                onValueChange={(value) => form.setValue("tipo", value as "global" | "pessoal")}
+                defaultValue="global"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">Global</SelectItem>
+                  <SelectItem value="pessoal">Pessoal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assunto">Assunto (opcional)</Label>
+              <Input
+                id="assunto"
+                {...form.register("assunto")}
+                placeholder="Ex: Lembrete: Seu pagamento vence em breve"
+              />
+              {form.formState.errors.assunto && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.assunto.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="corpo">Mensagem</Label>
+              <Textarea
+                id="corpo"
+                {...form.register("corpo")}
+                placeholder="Olá {{customer_name}}, este é um lembrete de que seu plano {{plan_name}} vence em {{due_date}}..."
+                rows={6}
+              />
+              {form.formState.errors.corpo && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.corpo.message}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={submitting}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Criando..." : "Criar Template"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Template</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do template
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={editForm.handleSubmit(onEdit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-nome">Nome do Template</Label>
+              <Input
+                id="edit-nome"
+                {...editForm.register("nome")}
+                placeholder="Ex: Lembrete de Vencimento"
+              />
+              {editForm.formState.errors.nome && (
+                <p className="text-sm text-destructive">
+                  {editForm.formState.errors.nome.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-tipo">Tipo</Label>
+              <Select
+                onValueChange={(value) => editForm.setValue("tipo", value as "global" | "pessoal")}
+                value={editForm.watch("tipo")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">Global</SelectItem>
+                  <SelectItem value="pessoal">Pessoal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-assunto">Assunto (opcional)</Label>
+              <Input
+                id="edit-assunto"
+                {...editForm.register("assunto")}
+                placeholder="Ex: Lembrete: Seu pagamento vence em breve"
+              />
+              {editForm.formState.errors.assunto && (
+                <p className="text-sm text-destructive">
+                  {editForm.formState.errors.assunto.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-corpo">Mensagem</Label>
+              <Textarea
+                id="edit-corpo"
+                {...editForm.register("corpo")}
+                placeholder="Olá {{customer_name}}, este é um lembrete de que seu plano {{plan_name}} vence em {{due_date}}..."
+                rows={6}
+              />
+              {editForm.formState.errors.corpo && (
+                <p className="text-sm text-destructive">
+                  {editForm.formState.errors.corpo.message}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                disabled={submitting}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o template "{selectedTemplate?.nome}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onDelete}
+              disabled={submitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {submitting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

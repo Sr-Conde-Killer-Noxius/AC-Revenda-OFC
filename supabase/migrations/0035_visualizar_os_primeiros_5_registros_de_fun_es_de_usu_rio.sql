@@ -1,1 +1,0 @@
-SELECT user_id, role FROM public.user_roles LIMIT 5;

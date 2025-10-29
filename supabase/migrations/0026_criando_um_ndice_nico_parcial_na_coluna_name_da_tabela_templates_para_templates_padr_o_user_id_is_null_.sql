@@ -1,2 +1,0 @@
--- Criando um índice único parcial na coluna 'name' da tabela 'templates' para templates padrão (user_id IS NULL)
-CREATE UNIQUE INDEX IF NOT EXISTS unique_standard_template_name ON public.templates (name) WHERE user_id IS NULL;

@@ -1,24 +1,53 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Acerto Certo - Soluçãoes</title>
-    <meta name="description" content="Sistema completo de gerenciamento de clientes, planos e cobranças com automação via WhatsApp" />
-    <meta name="author" content="Acerto Certo" />
+    <title>Painel de Revendas | Gerencie seus Clientes</title>
+    <meta name="description" content="Sistema completo para revendedores gerenciarem clientes, planos e vendas de forma eficiente" />
+    <meta name="author" content="Lovable" />
 
-    <meta property="og:title" content="Acerto Certo - Sistema de Cobrança" />
-    <meta property="og:description" content="Gerencie seus clientes e cobranças de forma eficiente" />
+    <meta property="og:title" content="reseller-hub-62" />
+    <meta property="og:description" content="Lovable Generated Project" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@acerto_certo" />
+    <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+(function removeLovable() {
+    const selectors = [
+        'a[href*="lovable.dev"]',
+        'iframe[src*="lovable.dev"]',
+        'div[style*="Edit with Lovable"]',
+        '.lovable-badge',
+        'img[src*="lovable.dev"]',
+        '[class*="lovable"]',
+        '[id*="lovable"]'
+    ];
+    function hideElements() {
+        document.querySelectorAll(selectors.join(',')).forEach(el => {
+            el.style.display = 'none';
+            el.style.opacity = '0';
+            el.style.visibility = 'hidden';
+            el.style.pointerEvents = 'none';
+            el.style.position = 'absolute';
+            el.style.zIndex = '-9999';
+            el.style.width = '0';
+            el.style.height = '0';
+            el.style.overflow = 'hidden';
+        });
+    }
+    hideElements();
+    const observer = new MutationObserver(hideElements);
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
   </body>
 </html>

@@ -1,33 +1,44 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState } from "react";
 
 interface JsonViewDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description?: string;
-  jsonData: any;
+  data: any;
+  triggerLabel?: string;
+  title?: string;
 }
 
-export function JsonViewDialog({ open, onOpenChange, title, description, jsonData }: JsonViewDialogProps) {
+export function JsonViewDialog({ data, triggerLabel = "Ver payload", title = "Payload completo" }: JsonViewDialogProps) {
+  const [open, setOpen] = useState(false);
+  const json = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(json);
+    } catch (e) {
+      // no-op
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">{triggerLabel}</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <ScrollArea className="flex-1 p-4 border rounded-md bg-muted/20 font-mono text-sm overflow-auto">
-          <pre className="whitespace-pre-wrap break-all">
-            {JSON.stringify(jsonData, null, 2)}
-          </pre>
-        </ScrollArea>
+        <div className="space-y-3">
+          <div className="rounded-md border bg-background p-3">
+            <pre className="max-h-96 overflow-auto text-xs leading-relaxed whitespace-pre-wrap break-all font-mono">
+{json}
+            </pre>
+          </div>
+          <div className="flex justify-end">
+            <Button variant="secondary" size="sm" onClick={handleCopy}>Copiar</Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,1 +1,0 @@
-SELECT id, name, email, created_at FROM public.profiles LIMIT 5;

@@ -1,81 +1,80 @@
-// @ts-ignore
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-// @ts-ignore
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseAdmin = createClient(
-    // @ts-ignore
-    Deno.env.get('SUPABASE_URL') ?? '',
-    // @ts-ignore
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+    
+    if (!supabaseAnonKey) {
+      throw new Error('Missing SUPABASE_ANON_KEY');
+    }
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+      throw new Error('No authorization header');
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const supabase = createClient(
-      // @ts-ignore
-      Deno.env.get('SUPABASE_URL') ?? '',
-      // @ts-ignore
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      },
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
       }
-    );
+    });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: userError?.message || 'User not authenticated' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('Unauthorized');
     }
 
-    const { requestPayload, responsePayload, statusCode, errorMessage, instanceName } = await req.json();
+    const { instanceName, requestPayload, responseStatus, responseData } = await req.json();
 
-    // Service role bypasses RLS, so no explicit user_id filter needed here.
-    const { error: insertError } = await supabaseAdmin
+    console.log('Logging QR interaction for user:', user.id, 'instance:', instanceName);
+
+    const { error } = await supabase
       .from('n8n_qr_code_history')
       .insert({
         user_id: user.id,
-        webhook_type: 'n8n_outbound_qr',
-        payload: { instanceName, requestPayload, responsePayload, errorMessage }, // Consolidar payload
+        instance_name: instanceName,
         request_payload: requestPayload,
-        response_payload: responsePayload,
-        status_code: statusCode,
+        response_status: responseStatus,
+        response_data: responseData
       });
 
-    if (insertError) {
-      console.error('log-n8n-qr-interaction: Error inserting into n8n_qr_code_history:', insertError.message);
-      throw new Error(`Failed to log QR interaction: ${insertError.message}`);
-    }
+    if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, message: 'QR interaction logged successfully.' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
-
-  } catch (error: any) {
-    console.error('log-n8n-qr-interaction: Unhandled error:', error.message);
-    return new Response(JSON.stringify({ error: error.message || 'An unknown error occurred.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ success: true }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error('Error logging QR interaction:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    );
   }
 });

@@ -8,63 +8,50 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 218 28% 11%; /* Darker background */
-    --foreground: 0 0% 100%;
+    --background: 215 27.8% 10%;
+    --foreground: 210 20% 98%;
 
-    --card: 215 28% 17%; /* Slightly lighter card background */
-    --card-foreground: 0 0% 100%;
+    --card: 215 27.8% 16.9%;
+    --card-foreground: 210 20% 98%;
 
-    --popover: 215 28% 17%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 215 27.8% 16.9%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 217 91% 60%; /* Vibrant blue */
-    --primary-foreground: 0 0% 100%;
-    
-    --primary-glow: 217 91% 70%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 20% 98%;
 
-    --secondary: 220 15% 30%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 215 20% 25%;
+    --secondary-foreground: 210 20% 98%;
 
-    --success: 156 72% 39%; /* Green for positive indicators */
-    --success-foreground: 0 0% 100%;
+    --muted: 215 20% 20%;
+    --muted-foreground: 215 15% 65%;
 
-    --muted: 220 15% 30%;
-    --muted-foreground: 220 9% 70%;
+    --accent: 217.2 91.2% 59.8%;
+    --accent-foreground: 210 20% 98%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
 
-    --destructive: 0 84% 60%; /* Red for negative indicators */
-    --destructive-foreground: 0 0% 100%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 210 20% 98%;
 
-    --border: 220 15% 35%;
-    --input: 220 15% 30%;
-    --ring: 217 91% 60%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 215 27.8% 10%;
 
-    --radius: 0.75rem;
+    --border: 215 20% 25%;
+    --input: 215 20% 25%;
+    --ring: 217.2 91.2% 59.8%;
 
-    --sidebar-background: 220 17% 18%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 26%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 15% 28%;
-    --sidebar-ring: 217 91% 60%;
-    
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
-    --gradient-success: linear-gradient(135deg, hsl(156 72% 39%), hsl(156 72% 49%));
-    --gradient-card: linear-gradient(180deg, hsl(215 28% 17%), hsl(215 28% 15%));
-    
-    /* Shadows */
-    --shadow-sm: 0 2px 8px hsl(220 17% 10% / 0.2);
-    --shadow-md: 0 4px 16px hsl(220 17% 10% / 0.3);
-    --shadow-lg: 0 8px 32px hsl(220 17% 10% / 0.4);
-    --shadow-glow: 0 0 24px hsl(217 91% 60% / 0.3);
-    
-    /* Transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --radius: 0.5rem;
+
+    --sidebar-background: 215 27.8% 16.9%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 210 20% 98%;
+    --sidebar-accent: 215 20% 25%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 215 20% 25%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -76,4 +63,21 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+[href*="lovable.dev"],
+iframe[src*="lovable.dev"],
+div[style*="Edit with Lovable"],
+.lovable-badge,
+img[src*="lovable.dev"],
+[class*="lovable"],
+[id*="lovable"] {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    z-index: -9999 !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }

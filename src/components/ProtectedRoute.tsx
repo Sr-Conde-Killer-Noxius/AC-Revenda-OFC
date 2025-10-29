@@ -1,42 +1,65 @@
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Enums } from "@/integrations/supabase/schema";
-import { useUserProfile } from "@/hooks/useProfileData";
+import { usePageAccess } from "@/hooks/usePageAccessControl";
 
-
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requiredRole?: Enums<'app_role'>;
-}
-
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { session, user, role, isLoading: isLoadingAuth } = useAuth();
-  const { data: userProfile, isLoading: isLoadingProfile } = useUserProfile();
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, userRole } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
 
-  if (isLoadingAuth || isLoadingProfile) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando...</p>
         </div>
       </div>
     );
   }
 
-  if (!session || !user) {
+  if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredRole && role !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+  // Role-based access control
+  const pathname = location.pathname;
+  
+  // Admin has access to everything
+  if (userRole === 'admin') {
+    return <>{children}</>;
   }
-
-  if (role !== 'admin' && !userProfile?.phone && location.pathname !== '/profile') {
-    navigate('/profile?missingPhone=true', { replace: true });
-    return null;
+  
+  // Verificar acesso dinâmico para master e reseller
+  const { data: hasAccess, isLoading: checkingAccess } = usePageAccess(userRole, pathname);
+  
+  if (checkingAccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Páginas sempre disponíveis (não precisam estar na tabela de controle)
+  const alwaysAllowed = ['/', '/configuracoes'];
+  
+  // Se for master ou reseller
+  if (userRole === 'master' || userRole === 'reseller') {
+    // Permitir páginas sempre disponíveis
+    if (alwaysAllowed.includes(pathname)) {
+      return <>{children}</>;
+    }
+    
+    // Verificar permissão dinâmica
+    if (hasAccess) {
+      return <>{children}</>;
+    }
+    
+    // Se não tem acesso, redirecionar
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

@@ -15,8 +15,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  optimizeDeps: {
-    // Removido 'date-fns-tz' da exclusão para permitir que o Vite otimize a dependência
-    exclude: [], 
-  },
 }));

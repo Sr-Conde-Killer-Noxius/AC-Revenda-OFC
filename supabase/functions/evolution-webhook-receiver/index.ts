@@ -1,229 +1,114 @@
-// @ts-ignore
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-// @ts-ignore
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseAdmin = createClient(
-    // @ts-ignore
-    Deno.env.get('SUPABASE_URL') ?? '',
-    // @ts-ignore
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
-  let payload: any;
-  let instanceName: string | null = null;
-  let userId: string | null = null;
-  let eventType: string | null = null;
-  let historyEntryId: string | null = null; // Para armazenar o ID da entrada inicial do histórico
-
   try {
-    payload = await req.json();
-    console.log('Evolution Webhook received:', JSON.stringify(payload, null, 2));
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    instanceName = payload.instance;
-    eventType = payload.event;
+    const payload = await req.json();
+    console.log('Received Evolution API webhook:', JSON.stringify(payload, null, 2));
 
-    // Se o nome da instância não for encontrado, loga e retorna erro 400
+    // Normalizar payload (pode ser array ou objeto)
+    const webhookData = Array.isArray(payload) ? payload[0] : payload;
+    
+    // Extrair dados do webhook (compatível com múltiplos formatos)
+    const instanceName = webhookData?.instance?.instanceName
+      ?? webhookData?.instance
+      ?? webhookData?.data?.instance
+      ?? webhookData?.data?.instanceName;
+
+    const state = webhookData?.instance?.state
+      ?? webhookData?.data?.state
+      ?? webhookData?.state;
+
+    const event = webhookData?.event ?? webhookData?.type ?? 'connection.update';
+
     if (!instanceName) {
-      console.error('Evolution Webhook: Instance name not found in payload.');
-      // Tenta logar o erro mesmo sem userId, se possível
-      await supabaseAdmin.from('evolution_api_history').insert({
-        user_id: null, // userId ainda não disponível
-        webhook_type: eventType || 'evolution_inbound_unknown',
-        payload: payload,
-        request_payload: payload,
-        response_payload: { error: 'Instance name not found in payload.' },
-        status_code: 400,
-      });
+      console.error('Missing instanceName in webhook payload');
       return new Response(
-        JSON.stringify({ error: 'Instance name not found in payload.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Missing instanceName' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    // Buscar o user_id associado a esta instância
-    // Service role bypasses RLS, so no explicit user_id filter needed here.
-    const { data: instanceData, error: instanceError } = await supabaseAdmin
-      .from('user_instances')
-      .select('user_id')
-      .eq('instance_name', instanceName)
-      .single();
-
-    if (instanceError || !instanceData) {
-      console.error('Evolution Webhook: Instance not found or error fetching user_id:', instanceError?.message);
-      // Tenta logar o erro mesmo sem userId, se possível
-      await supabaseAdmin.from('evolution_api_history').insert({
-        user_id: null, // userId ainda não disponível
-        webhook_type: eventType || 'evolution_inbound_unknown',
-        payload: payload,
-        request_payload: payload,
-        response_payload: { error: 'Instance not found or associated user_id could not be retrieved.' },
-        status_code: 404,
-      });
-      return new Response(
-        JSON.stringify({ error: 'Instance not found or associated user_id could not be retrieved.' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    userId = instanceData.user_id;
-
-    // Log inicial da requisição recebida
-    const { data: initialHistoryEntry, error: initialLogError } = await supabaseAdmin
+    // Logar no histórico
+    const { error: historyError } = await supabase
       .from('evolution_api_history')
       .insert({
-        user_id: userId,
-        webhook_type: eventType || 'evolution_inbound_unknown',
-        payload: payload, // Armazena o payload completo
-        request_payload: payload,
-        status_code: 200, // Assume sucesso no recebimento da requisição
-        response_payload: { message: 'Processing...' }, // Placeholder
+        instance_name: instanceName,
+        event_type: event,
+        status_code: 200,
+        payload: payload
+      });
+
+    if (historyError) {
+      console.error('Error logging to history:', historyError);
+    } else {
+      console.log(`Logged to history for instance: ${instanceName}`);
+    }
+
+    // Determinar status da conexão baseado no state
+    let connectionStatus = 'disconnected';
+    let qrCodeBase64 = null;
+    let lastConnectedAt = null;
+
+    if (state === 'connecting') {
+      connectionStatus = 'connecting';
+    } else if (state === 'open') {
+      connectionStatus = 'connected';
+      lastConnectedAt = new Date().toISOString();
+    } else if (state === 'close') {
+      connectionStatus = 'disconnected';
+    }
+
+    console.log(`Updating instance ${instanceName} to status: ${connectionStatus}`);
+
+    // Atualizar user_instances
+    const { error: updateError } = await supabase
+      .from('user_instances')
+      .update({
+        connection_status: connectionStatus,
+        qr_code_base64: qrCodeBase64,
+        last_connected_at: lastConnectedAt,
       })
-      .select('id')
-      .single();
+      .eq('instance_name', instanceName);
 
-    if (initialLogError) {
-      console.error('Evolution Webhook: Error logging initial history entry:', initialLogError.message);
-    } else {
-      historyEntryId = initialHistoryEntry?.id;
+    if (updateError) {
+      console.error('Error updating user_instances:', updateError);
+      throw updateError;
     }
 
-    let finalStatus = 200;
-    let finalMessage = `Evolution webhook processed. Event: ${eventType}, Instance: ${instanceName}.`;
-
-    // Lógica Condicional para Atualização de Status
-    if (eventType === 'connection.update' && payload.data?.state === 'open') {
-      console.log(`Evolution Webhook: Connection update event with state 'open' detected for instance ${instanceName}.`);
-
-      // Service role bypasses RLS, but we still filter by user_id to ensure data integrity.
-      const { error: updateError } = await supabaseAdmin
-        .from('user_instances')
-        .update({ status: 'connected', qr_code_base64: null })
-        .eq('instance_name', instanceName)
-        .eq('user_id', userId); // Filter by user_id
-
-      if (updateError) {
-        console.error('Evolution Webhook: Error updating user_instances to connected:', updateError);
-        finalStatus = 500; // Erro interno do servidor para falha na atualização do DB
-        finalMessage += ` (Internal update error: ${updateError.message})`;
-      } else {
-        console.log(`Evolution Webhook: user_instances for ${instanceName} updated to 'connected'.`);
-      }
-
-      // Service role bypasses RLS, but we still filter by user_id to ensure data integrity.
-      const { error: statusError } = await supabaseAdmin
-        .from('connection_status')
-        .upsert({
-          user_id: userId,
-          instance_name: instanceName,
-          status: 'connected',
-          qr_code_base64: null,
-          last_updated: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,instance_name'
-        });
-
-      if (statusError) {
-        console.error('Evolution Webhook: Error updating connection_status to connected:', statusError);
-        finalStatus = 500; // Erro interno do servidor para falha na atualização do DB
-        finalMessage += ` (Internal connection_status update error: ${statusError.message})`;
-      } else {
-        console.log(`Evolution Webhook: connection_status for ${instanceName} updated to 'connected'.`);
-      }
-    } else if (eventType === 'connection.update' && payload.data?.state === 'close') { // NOVO: Lógica para 'close'
-      console.log(`Evolution Webhook: Connection update event with state 'close' detected for instance ${instanceName}.`);
-
-      // Service role bypasses RLS, but we still filter by user_id to ensure data integrity.
-      const { error: updateError } = await supabaseAdmin
-        .from('user_instances')
-        .update({ status: 'disconnected', qr_code_base64: null })
-        .eq('instance_name', instanceName)
-        .eq('user_id', userId); // Filter by user_id
-
-      if (updateError) {
-        console.error('Evolution Webhook: Error updating user_instances to disconnected:', updateError);
-        finalStatus = 500;
-        finalMessage += ` (Internal update error: ${updateError.message})`;
-      } else {
-        console.log(`Evolution Webhook: user_instances for ${instanceName} updated to 'disconnected'.`);
-      }
-
-      // Service role bypasses RLS, but we still filter by user_id to ensure data integrity.
-      const { error: statusError } = await supabaseAdmin
-        .from('connection_status')
-        .upsert({
-          user_id: userId,
-          instance_name: instanceName,
-          status: 'disconnected',
-          qr_code_base64: null,
-          last_updated: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,instance_name'
-        });
-
-      if (statusError) {
-        console.error('Evolution Webhook: Error updating connection_status to disconnected:', statusError);
-        finalStatus = 500;
-        finalMessage += ` (Internal connection_status update error: ${statusError.message})`;
-      } else {
-        console.log(`Evolution Webhook: connection_status for ${instanceName} updated to 'disconnected'.`);
-      }
-    } else {
-      finalMessage += ` No status change applied.`;
-    }
-
-    // Atualiza a entrada do histórico com o status e mensagem finais
-    if (historyEntryId) {
-      await supabaseAdmin
-        .from('evolution_api_history')
-        .update({ status_code: finalStatus, response_payload: { message: finalMessage } })
-        .eq('id', historyEntryId);
-    }
+    console.log(`Successfully updated instance ${instanceName}`);
 
     return new Response(
-      JSON.stringify({ success: finalStatus === 200, message: finalMessage }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: finalStatus }
+      JSON.stringify({ success: true, message: 'Webhook processed' }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
     );
-
-  } catch (error: any) {
-    console.error('Evolution Webhook: Unhandled error:', error.message);
-    const errorStatus = 500;
-    const errorMessage = error.message || 'Unknown error in Evolution Webhook.';
-
-    // Se uma entrada inicial do histórico foi criada, atualiza. Caso contrário, cria uma nova.
-    if (historyEntryId && userId) {
-      await supabaseAdmin
-        .from('evolution_api_history')
-        .update({ status_code: errorStatus, response_payload: { error: errorMessage } })
-        .eq('id', historyEntryId);
-    } else if (userId && payload && eventType) {
-      await supabaseAdmin
-        .from('evolution_api_history')
-        .insert({
-          user_id: userId,
-          webhook_type: eventType || 'evolution_inbound_unknown',
-          payload: payload,
-          request_payload: payload,
-          response_payload: { error: errorMessage },
-          status_code: errorStatus,
-        });
-    } else {
-      console.error('Evolution Webhook: Could not log error to evolution_api_history, missing userId, payload or eventType.');
-    }
-
+  } catch (error) {
+    console.error('Error processing webhook:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: errorStatus, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
     );
   }
 });
