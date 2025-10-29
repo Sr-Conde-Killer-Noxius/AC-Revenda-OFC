@@ -37,16 +37,16 @@ export function AppHeader({ title, subtitle }: AppHeaderProps) {
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-card px-4 sm:px-6">
       <SidebarTrigger className="text-foreground" />
       
-      <div className="flex-1 min-w-0"> {/* Adicionado min-w-0 para evitar overflow */}
+      <div className="flex-1 min-w-0 overflow-hidden"> {/* Adicionado overflow-hidden para garantir que o conteúdo seja truncado */}
         <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">{title}</h1> {/* Truncate para títulos longos */}
         {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>} {/* Truncate para subtítulos longos */}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3"> {/* Ajustado gap */}
         {userRole !== 'reseller' && (
-          <div className="flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-md bg-primary/10 border border-primary/20">
+          <div className="flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-md bg-primary/10 border border-primary/20 max-w-full"> {/* Adicionado max-w-full */}
             <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-primary" /> {/* Ajustado tamanho do ícone */}
-            <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap"> {/* Ajustado tamanho da fonte e nowrap */}
+            <span className="text-xs sm:text-sm font-medium text-foreground truncate"> {/* Removido whitespace-nowrap e adicionado truncate */}
               {userRole === 'admin' 
                 ? 'Créditos: Ilimitado' 
                 : `Créditos: ${creditData?.balance ?? 0}`}
