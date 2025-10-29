@@ -240,6 +240,8 @@ export default function Revenda() {
   };
 
   const loadPotentialCreators = async () => {
+    if (userRole !== 'admin') return; // Only admin can change creators
+
     try {
       // Load all users with admin or master role
       const { data: profiles, error: profilesError } = await supabase
@@ -742,211 +744,213 @@ export default function Revenda() {
         </div>
 
         <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Nível</TableHead>
-                {userRole === 'admin' && <TableHead>Abaixo de</TableHead>}
-                <TableHead>Plano</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Vencimento</TableHead>
-                <TableHead>Vencimento do Crédito</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="overflow-x-auto"> {/* Adicionado para responsividade da tabela */}
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={userRole === 'admin' ? 11 : 10} className="text-center py-8">
-                    <div className="flex justify-center">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                    </div>
-                  </TableCell>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Nível</TableHead>
+                  {userRole === 'admin' && <TableHead>Abaixo de</TableHead>}
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Vencimento do Crédito</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : resellers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={userRole === 'admin' ? 11 : 10} className="text-center py-8 text-muted-foreground">
-                    Nenhum revendedor encontrado
-                  </TableCell>
-                </TableRow>
-              ) : (
-                resellers.map((reseller) => (
-                  <TableRow key={reseller.id}>
-                    <TableCell className="font-medium">
-                      {reseller.full_name || "N/A"}
-                    </TableCell>
-                    <TableCell>{reseller.email || "N/A"}</TableCell>
-                    <TableCell>{reseller.phone || "N/A"}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          reseller.role === "admin"
-                            ? "default"
-                            : reseller.role === "master"
-                            ? "secondary"
-                            : "outline"
-                        }
-                      >
-                        {reseller.role === "admin"
-                          ? "Admin"
-                          : reseller.role === "master"
-                          ? "Master"
-                          : "Revendedor"}
-                      </Badge>
-                    </TableCell>
-                    {userRole === 'admin' && (
-                      <TableCell>
-                        <Select
-                          value={reseller.created_by || ""}
-                          onValueChange={(value) => updateCreator(reseller.user_id, value)}
-                          disabled={changingCreator}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue>
-                              {!reseller.created_by || reseller.created_by === reseller.user_id 
-                                ? "Ausente" 
-                                : reseller.creator?.[0]?.full_name || "Ausente"}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {potentialCreators.map((creator) => (
-                              <SelectItem key={creator.user_id} value={creator.user_id}>
-                                {creator.full_name} ({creator.role === 'admin' ? 'Admin' : 'Master'})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    )}
-                    <TableCell>{reseller.planos?.nome || "N/A"}</TableCell>
-                    <TableCell>
-                      {reseller.planos?.valor 
-                        ? formatCurrency(reseller.planos.valor)
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {reseller.expiry_date 
-                        ? new Date(reseller.expiry_date).toLocaleDateString("pt-BR")
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {reseller.credit_expiry_date 
-                        ? new Date(reseller.credit_expiry_date).toLocaleDateString("pt-BR")
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(reseller.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem onClick={() => handleEdit(reseller)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => handleDelete(reseller)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <ListChecks className="mr-2 h-4 w-4" />
-                              Mudar Status
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-popover">
-                              <DropdownMenuItem 
-                                onClick={() => updateResellerStatus(reseller.user_id, 'active')}
-                                disabled={updatingStatus}
-                              >
-                                {reseller.status === 'active' && <Check className="mr-2 h-4 w-4" />}
-                                {reseller.status !== 'active' && <span className="mr-6" />}
-                                Ativo
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => updateResellerStatus(reseller.user_id, 'inactive')}
-                                disabled={updatingStatus}
-                              >
-                                {reseller.status === 'inactive' && <Check className="mr-2 h-4 w-4" />}
-                                {reseller.status !== 'inactive' && <span className="mr-6" />}
-                                Inativo
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => updateResellerStatus(reseller.user_id, 'suspended')}
-                                disabled={updatingStatus}
-                              >
-                                {reseller.status === 'suspended' && <Check className="mr-2 h-4 w-4" />}
-                                {reseller.status !== 'suspended' && <span className="mr-6" />}
-                                Suspenso
-                              </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <Shield className="mr-2 h-4 w-4" />
-                              Alterar Nível
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-popover">
-                              {userRole === 'admin' && (
-                                <DropdownMenuItem 
-                                  onClick={() => updateResellerRole(reseller.user_id, 'admin')}
-                                  disabled={updatingRole}
-                                >
-                                  {reseller.role === 'admin' && <Check className="mr-2 h-4 w-4" />}
-                                  {reseller.role !== 'admin' && <span className="mr-6" />}
-                                  Admin
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem 
-                                onClick={() => updateResellerRole(reseller.user_id, 'master')}
-                                disabled={updatingRole}
-                              >
-                                {reseller.role === 'master' && <Check className="mr-2 h-4 w-4" />}
-                                {reseller.role !== 'master' && <span className="mr-6" />}
-                                Master
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => updateResellerRole(reseller.user_id, 'reseller')}
-                                disabled={updatingRole}
-                              >
-                                {reseller.role === 'reseller' && <Check className="mr-2 h-4 w-4" />}
-                                {reseller.role !== 'reseller' && <span className="mr-6" />}
-                                Revendedor
-                              </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleRenewCredit(reseller)}
-                            disabled={!canRenewCredit}
-                          >
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Renovar Revenda
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedReseller(reseller);
-                            setNotificationDialogOpen(true);
-                          }}>
-                            <Bell className="mr-2 h-4 w-4" />
-                            Notificar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={userRole === 'admin' ? 11 : 10} className="text-center py-8">
+                      <div className="flex justify-center">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : resellers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={userRole === 'admin' ? 11 : 10} className="text-center py-8 text-muted-foreground">
+                      Nenhum revendedor encontrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  resellers.map((reseller) => (
+                    <TableRow key={reseller.id}>
+                      <TableCell className="font-medium">
+                        {reseller.full_name || "N/A"}
+                      </TableCell>
+                      <TableCell>{reseller.email || "N/A"}</TableCell>
+                      <TableCell>{reseller.phone || "N/A"}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            reseller.role === "admin"
+                              ? "default"
+                              : reseller.role === "master"
+                              ? "secondary"
+                              : "outline"
+                          }
+                        >
+                          {reseller.role === "admin"
+                            ? "Admin"
+                            : reseller.role === "master"
+                            ? "Master"
+                            : "Revendedor"}
+                        </Badge>
+                      </TableCell>
+                      {userRole === 'admin' && (
+                        <TableCell>
+                          <Select
+                            value={reseller.created_by || ""}
+                            onValueChange={(value) => updateCreator(reseller.user_id, value)}
+                            disabled={changingCreator}
+                          >
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue>
+                                {!reseller.created_by || reseller.created_by === reseller.user_id 
+                                  ? "Ausente" 
+                                  : reseller.creator?.[0]?.full_name || "Ausente"}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {potentialCreators.map((creator) => (
+                                <SelectItem key={creator.user_id} value={creator.user_id}>
+                                  {creator.full_name} ({creator.role === 'admin' ? 'Admin' : 'Master'})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
+                      <TableCell>{reseller.planos?.nome || "N/A"}</TableCell>
+                      <TableCell>
+                        {reseller.planos?.valor 
+                          ? formatCurrency(reseller.planos.valor)
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {reseller.expiry_date 
+                          ? new Date(reseller.expiry_date).toLocaleDateString("pt-BR")
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {reseller.credit_expiry_date 
+                          ? new Date(reseller.credit_expiry_date).toLocaleDateString("pt-BR")
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(reseller.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuItem onClick={() => handleEdit(reseller)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDelete(reseller)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <ListChecks className="mr-2 h-4 w-4" />
+                                Mudar Status
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="bg-popover">
+                                <DropdownMenuItem 
+                                  onClick={() => updateResellerStatus(reseller.user_id, 'active')}
+                                  disabled={updatingStatus}
+                                >
+                                  {reseller.status === 'active' && <Check className="mr-2 h-4 w-4" />}
+                                  {reseller.status !== 'active' && <span className="mr-6" />}
+                                  Ativo
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => updateResellerStatus(reseller.user_id, 'inactive')}
+                                  disabled={updatingStatus}
+                                >
+                                  {reseller.status === 'inactive' && <Check className="mr-2 h-4 w-4" />}
+                                  {reseller.status !== 'inactive' && <span className="mr-6" />}
+                                  Inativo
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => updateResellerStatus(reseller.user_id, 'suspended')}
+                                  disabled={updatingStatus}
+                                >
+                                  {reseller.status === 'suspended' && <Check className="mr-2 h-4 w-4" />}
+                                  {reseller.status !== 'suspended' && <span className="mr-6" />}
+                                  Suspenso
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <Shield className="mr-2 h-4 w-4" />
+                                Alterar Nível
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="bg-popover">
+                                {userRole === 'admin' && (
+                                  <DropdownMenuItem 
+                                    onClick={() => updateResellerRole(reseller.user_id, 'admin')}
+                                    disabled={updatingRole}
+                                  >
+                                    {reseller.role === 'admin' && <Check className="mr-2 h-4 w-4" />}
+                                    {reseller.role !== 'admin' && <span className="mr-6" />}
+                                    Admin
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem 
+                                  onClick={() => updateResellerRole(reseller.user_id, 'master')}
+                                  disabled={updatingRole}
+                                >
+                                  {reseller.role === 'master' && <Check className="mr-2 h-4 w-4" />}
+                                  {reseller.role !== 'master' && <span className="mr-6" />}
+                                  Master
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => updateResellerRole(reseller.user_id, 'reseller')}
+                                  disabled={updatingRole}
+                                >
+                                  {reseller.role === 'reseller' && <Check className="mr-2 h-4 w-4" />}
+                                  {reseller.role !== 'reseller' && <span className="mr-6" />}
+                                  Revendedor
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleRenewCredit(reseller)}
+                              disabled={!canRenewCredit}
+                            >
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Renovar Revenda
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedReseller(reseller);
+                              setNotificationDialogOpen(true);
+                            }}>
+                              <Bell className="mr-2 h-4 w-4" />
+                              Notificar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div> {/* Fim do contêiner overflow-x-auto */}
         </div>
       </main>
 
