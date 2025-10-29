@@ -366,7 +366,7 @@ export default function Templates() {
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[600px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Novo Template</DialogTitle>
             <DialogDescription>
@@ -454,7 +454,7 @@ export default function Templates() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[600px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Editar Template</DialogTitle>
             <DialogDescription>
@@ -542,7 +542,7 @@ export default function Templates() {
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>

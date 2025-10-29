@@ -574,7 +574,7 @@ export default function Carteira() {
 
       {/* Add Credits Dialog (Admin only) */}
       <Dialog open={addCreditsDialogOpen} onOpenChange={setAddCreditsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Adicionar Créditos</DialogTitle>
             <DialogDescription>
@@ -631,7 +631,7 @@ export default function Carteira() {
 
       {/* Remove Credits Dialog (Admin only) */}
       <Dialog open={removeCreditsDialogOpen} onOpenChange={setRemoveCreditsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Remover Créditos</DialogTitle>
             <DialogDescription>

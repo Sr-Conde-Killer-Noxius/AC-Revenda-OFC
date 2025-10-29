@@ -314,7 +314,7 @@ export default function Planos() {
                           size="icon"
                           onClick={() => handleDelete(plano)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -328,7 +328,7 @@ export default function Planos() {
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Novo Plano</DialogTitle>
             <DialogDescription>
@@ -387,7 +387,7 @@ export default function Planos() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Editar Plano</DialogTitle>
             <DialogDescription>
@@ -446,7 +446,7 @@ export default function Planos() {
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>

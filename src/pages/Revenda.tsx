@@ -29,6 +29,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -956,7 +957,7 @@ export default function Revenda() {
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Novo Revendedor</DialogTitle>
             <DialogDescription>
@@ -1055,7 +1056,7 @@ export default function Revenda() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <DialogHeader>
             <DialogTitle>Editar Revendedor</DialogTitle>
             <DialogDescription>
@@ -1184,7 +1185,7 @@ export default function Revenda() {
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1207,7 +1208,7 @@ export default function Revenda() {
 
       {/* Renew Credit Dialog */}
       <AlertDialog open={renewDialogOpen} onOpenChange={setRenewDialogOpen}>
-        <AlertDialogContent className="sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-[425px]"> {/* Adicionado max-w para dialogs */}
           <AlertDialogHeader>
             <AlertDialogTitle>Renovar Revenda</AlertDialogTitle>
             <AlertDialogDescription>
