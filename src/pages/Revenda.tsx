@@ -770,12 +770,21 @@ export default function Revenda() {
         throw new Error("Não autenticado");
       }
 
+      // Determine new status based on newCreditExpiryDate
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize today to start of day
+      const expiryDateOnly = new Date(newCreditExpiryDate);
+      expiryDateOnly.setHours(0, 0, 0, 0); // Normalize expiry date to start of day
+
+      const newStatus = expiryDateOnly >= today ? 'active' : 'inactive';
+
       const { data: result, error } = await supabase.functions.invoke(
         "update-reseller-user",
         {
           body: {
             userId: selectedResellerForCreditExpiry.user_id,
             creditExpiryDate: newCreditExpiryDate.toISOString(),
+            status: newStatus, // Pass the calculated status
           },
           headers: {
             'Authorization': `Bearer ${sessionData.session.access_token}`
@@ -790,7 +799,7 @@ export default function Revenda() {
 
       toast({
         title: "Vencimento do Crédito atualizado!",
-        description: `O vencimento do crédito para ${selectedResellerForCreditExpiry.full_name} foi atualizado para ${format(newCreditExpiryDate, "dd/MM/yyyy")}.`,
+        description: `O vencimento do crédito para ${selectedResellerForCreditExpiry.full_name} foi atualizado para ${format(newCreditExpiryDate, "dd/MM/yyyy")} e o status para ${newStatus === 'active' ? 'Ativo' : 'Inativo'}.`,
       });
 
       setCreditExpiryDialogOpen(false);
