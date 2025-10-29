@@ -27,9 +27,9 @@ serve(async (req) => {
     // Find profiles where credit_expiry_date has passed and status is active
     const { data: expiredProfiles, error: fetchError } = await supabaseAdmin
       .from('profiles')
-      .select('user_id, full_name, credit_expiry_date')
+      .select('user_id, full_name, credit_expiry_date, status') // Also select current status
       .lt('credit_expiry_date', new Date().toISOString())
-      .eq('status', 'active');
+      .eq('status', 'active'); // Only consider active profiles
 
     if (fetchError) throw fetchError;
 
@@ -50,27 +50,51 @@ serve(async (req) => {
 
     console.log(`Found ${expiredProfiles.length} expired profiles`);
 
-    // Update status to inactive for expired profiles
-    const userIds = expiredProfiles.map(p => p.user_id);
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ status: 'inactive', updated_at: new Date().toISOString() })
-      .in('user_id', userIds);
+    const updatedProfiles: { user_id: string; full_name: string | null; expired_at: string | null; new_status: string; update_result: any }[] = [];
 
-    if (updateError) throw updateError;
+    for (const profile of expiredProfiles) {
+      // Invoke update-reseller-user to change status and trigger webhook
+      console.log(`Invoking update-reseller-user for user ${profile.user_id} to set status to 'inactive'`);
+      
+      const updateResellerUserUrl = `${supabaseUrl}/functions/v1/update-reseller-user`;
+      
+      const invokeResponse = await fetch(updateResellerUserUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseServiceKey}` // Use service role key for internal function call
+        },
+        body: JSON.stringify({
+          userId: profile.user_id,
+          status: 'inactive',
+          // Do not pass email, fullName, password, etc., as we only want to update status
+        }),
+      });
 
-    console.log('Successfully updated expired profiles to inactive');
+      const invokeResponseBody = await invokeResponse.json();
+
+      if (!invokeResponse.ok) {
+        console.error(`Failed to invoke update-reseller-user for user ${profile.user_id}:`, invokeResponseBody);
+        // Continue processing other profiles even if one fails
+      } else {
+        console.log(`Successfully invoked update-reseller-user for user ${profile.user_id}. Response:`, invokeResponseBody);
+      }
+
+      updatedProfiles.push({
+        user_id: profile.user_id,
+        full_name: profile.full_name,
+        expired_at: profile.credit_expiry_date,
+        new_status: 'inactive',
+        update_result: invokeResponseBody,
+      });
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Updated ${expiredProfiles.length} expired profiles to inactive`,
+        message: `Attempted to update ${expiredProfiles.length} expired profiles to inactive`,
         count: expiredProfiles.length,
-        profiles: expiredProfiles.map(p => ({ 
-          user_id: p.user_id, 
-          full_name: p.full_name,
-          expired_at: p.credit_expiry_date
-        }))
+        profiles: updatedProfiles
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
