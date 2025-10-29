@@ -27,18 +27,19 @@ interface Transaction {
   created_at: string;
   performed_by: string;
   related_user_id: string | null;
-  user_id: string;
-  master_profile?: {
+  user_id: string; // The user whose credit was affected
+  performed_by_profile?: {
     full_name: string;
   } | null;
-  admin_profile?: {
+  target_user_profile?: {
     full_name: string;
   } | null;
 }
 
-interface MasterUser {
+interface ManagedUser {
   user_id: string;
   full_name: string;
+  role: string;
 }
 
 export default function Carteira() {
@@ -49,10 +50,10 @@ export default function Carteira() {
   const [addCreditsDialogOpen, setAddCreditsDialogOpen] = useState(false);
   const [removeCreditsDialogOpen, setRemoveCreditsDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [masterUsers, setMasterUsers] = useState<MasterUser[]>([]);
-  const [selectedMasterId, setSelectedMasterId] = useState("");
+  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]); // Users that the current user can manage credits for
+  const [selectedTargetUserId, setSelectedTargetUserId] = useState("");
   const [creditAmount, setCreditAmount] = useState("");
-  const [selectedRemoveMasterId, setSelectedRemoveMasterId] = useState("");
+  const [selectedRemoveTargetUserId, setSelectedRemoveTargetUserId] = useState("");
   const [removeCreditAmount, setRemoveCreditAmount] = useState("");
   const { toast } = useToast();
 
@@ -84,6 +85,49 @@ export default function Carteira() {
     }
   };
 
+  const loadManagedUsers = async () => {
+    if (!user) return;
+
+    try {
+      let query;
+      if (userRole === 'admin') {
+        // Admin can manage credits for all master users
+        query = supabase
+          .from('profiles')
+          .select('user_id, full_name, user_roles(role)')
+          .not('user_id', 'eq', user.id) // Exclude self
+          .order('full_name', { ascending: true });
+      } else if (userRole === 'master') {
+        // Master can manage credits for resellers they created
+        query = supabase
+          .from('profiles')
+          .select('user_id, full_name, user_roles(role)')
+          .eq('created_by', user.id)
+          .order('full_name', { ascending: true });
+      } else {
+        setManagedUsers([]);
+        return;
+      }
+
+      const { data: profiles, error: profilesError } = await query;
+
+      if (profilesError) throw profilesError;
+
+      const filteredUsers: ManagedUser[] = [];
+      for (const profile of profiles || []) {
+        const role = (profile.user_roles as any)?.role;
+        if (userRole === 'admin' && role === 'master') {
+          filteredUsers.push({ user_id: profile.user_id, full_name: profile.full_name || "N/A", role });
+        } else if (userRole === 'master' && role === 'reseller') {
+          filteredUsers.push({ user_id: profile.user_id, full_name: profile.full_name || "N/A", role });
+        }
+      }
+      setManagedUsers(filteredUsers);
+    } catch (error: any) {
+      console.error('Error loading managed users:', error);
+    }
+  };
+
   const loadTransactions = async () => {
     if (!user) return;
 
@@ -92,45 +136,31 @@ export default function Carteira() {
       
       let query = supabase
         .from('credit_transactions')
-        .select('*')
+        .select('*, performed_by_profile:profiles!performed_by(full_name), target_user_profile:profiles!related_user_id(full_name)')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      // Admin sees all transactions, Master sees only their own
-      if (userRole !== 'admin') {
-        query = query.eq('user_id', user.id);
+      if (userRole === 'master') {
+        // For master, fetch IDs of resellers they created
+        const { data: createdResellers, error: resellersError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('created_by', user.id);
+
+        if (resellersError) throw resellersError;
+        const createdResellerIds = createdResellers?.map(p => p.user_id) || [];
+
+        // Master sees:
+        // 1. Their own credit movements (user_id = master.id)
+        // 2. Credit movements for resellers they created (user_id in createdResellerIds)
+        // 3. Credit movements they performed on their resellers (performed_by = master.id AND related_user_id in createdResellerIds)
+        query = query.or(`user_id.eq.${user.id},user_id.in.(${createdResellerIds.join(',')}),and(performed_by.eq.${user.id},related_user_id.in.(${createdResellerIds.join(',')}))`);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
-
-      // If admin, fetch master profiles and admin profiles
-      if (userRole === 'admin' && data) {
-        const userIds = [...new Set(data.map(t => t.user_id))];
-        const performedByIds = [...new Set(data.map(t => t.performed_by).filter(Boolean))];
-        
-        const allIds = [...new Set([...userIds, ...performedByIds])];
-        
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', allIds);
-
-        if (!profilesError && profiles) {
-          const profileMap = new Map(profiles.map(p => [p.user_id, p.full_name]));
-          
-          const transactionsWithProfiles = data.map(t => ({
-            ...t,
-            master_profile: { full_name: profileMap.get(t.user_id) || 'N/A' },
-            admin_profile: t.performed_by ? { full_name: profileMap.get(t.performed_by) || 'N/A' } : null
-          }));
-          
-          setTransactions(transactionsWithProfiles);
-          return;
-        }
-      }
-
+      
       setTransactions(data || []);
     } catch (error: any) {
       console.error('Error loading transactions:', error);
@@ -144,53 +174,17 @@ export default function Carteira() {
     }
   };
 
-  const loadMasterUsers = async () => {
-    if (userRole !== 'admin') return;
-
-    try {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name')
-        .order('full_name', { ascending: true });
-
-      if (profilesError) throw profilesError;
-
-      const mastersWithRoles: MasterUser[] = [];
-      
-      for (const profile of profiles || []) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', profile.user_id)
-          .maybeSingle();
-        
-        if (roleData?.role === 'master') {
-          mastersWithRoles.push({
-            user_id: profile.user_id,
-            full_name: profile.full_name || "N/A",
-          });
-        }
-      }
-
-      setMasterUsers(mastersWithRoles);
-    } catch (error: any) {
-      console.error('Error loading master users:', error);
-    }
-  };
-
   useEffect(() => {
     loadCreditBalance();
+    loadManagedUsers();
     loadTransactions();
-    if (userRole === 'admin') {
-      loadMasterUsers();
-    }
   }, [userRole, user]);
 
-  const handleAddCredits = async () => {
-    if (!selectedMasterId || !creditAmount) {
+  const handleManageCredits = async (targetUserId: string, amount: number) => {
+    if (!targetUserId || amount === 0) {
       toast({
         title: "Campos obrigatórios",
-        description: "Selecione um master e informe a quantidade de créditos",
+        description: "Selecione um usuário e informe a quantidade de créditos",
         variant: "destructive",
       });
       return;
@@ -209,8 +203,8 @@ export default function Carteira() {
         "manage-credits",
         {
           body: {
-            targetUserId: selectedMasterId,
-            amount: parseInt(creditAmount),
+            targetUserId: targetUserId,
+            amount: amount,
           },
           headers: {
             'Authorization': `Bearer ${sessionData.session.access_token}`
@@ -225,80 +219,23 @@ export default function Carteira() {
       }
 
       toast({
-        title: "Créditos adicionados com sucesso!",
-        description: `${creditAmount} crédito(s) adicionado(s) a ${result.targetUser}`,
+        title: "Sucesso!",
+        description: `${Math.abs(amount)} crédito(s) ${amount > 0 ? 'adicionado(s) a' : 'removido(s) de'} ${result.targetUser}`,
       });
 
       setAddCreditsDialogOpen(false);
-      setSelectedMasterId("");
-      setCreditAmount("");
-      loadCreditBalance();
-      loadTransactions();
-    } catch (error: any) {
-      console.error("Error adding credits:", error);
-      toast({
-        title: "Erro ao adicionar créditos",
-        description: error.message || "Ocorreu um erro ao adicionar os créditos",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleRemoveCredits = async () => {
-    if (!selectedRemoveMasterId || !removeCreditAmount) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Selecione um master e informe a quantidade de créditos",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        throw new Error("Não autenticado");
-      }
-
-      const { data: result, error } = await supabase.functions.invoke(
-        "manage-credits",
-        {
-          body: {
-            targetUserId: selectedRemoveMasterId,
-            amount: -parseInt(removeCreditAmount), // Negativo para remover
-          },
-          headers: {
-            'Authorization': `Bearer ${sessionData.session.access_token}`
-          }
-        }
-      );
-
-      if (error) throw error;
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
-      toast({
-        title: "Créditos removidos com sucesso!",
-        description: `${removeCreditAmount} crédito(s) removido(s) de ${result.targetUser}`,
-      });
-
       setRemoveCreditsDialogOpen(false);
-      setSelectedRemoveMasterId("");
+      setSelectedTargetUserId("");
+      setCreditAmount("");
+      setSelectedRemoveTargetUserId("");
       setRemoveCreditAmount("");
       loadCreditBalance();
       loadTransactions();
     } catch (error: any) {
-      console.error("Error adding credits:", error);
+      console.error("Error managing credits:", error);
       toast({
-        title: "Erro ao adicionar créditos",
-        description: error.message || "Ocorreu um erro ao adicionar os créditos",
+        title: "Erro ao gerenciar créditos",
+        description: error.message || "Ocorreu um erro ao gerenciar os créditos",
         variant: "destructive",
       });
     } finally {
@@ -306,17 +243,26 @@ export default function Carteira() {
     }
   };
 
-  const creditedTransactions = transactions.filter(t => t.transaction_type === 'credit_added');
-  const spentTransactions = transactions.filter(t => t.transaction_type === 'credit_spent');
-  const adminAddedTransactions = transactions.filter(t => 
-    t.transaction_type === 'credit_added' && t.performed_by
+  const handleAddCredits = () => handleManageCredits(selectedTargetUserId, parseInt(creditAmount));
+  const handleRemoveCredits = () => handleManageCredits(selectedRemoveTargetUserId, -parseInt(removeCreditAmount));
+
+  const managedCreditTransactions = transactions.filter(t => 
+    (userRole === 'admin' && t.transaction_type === 'credit_added' && t.performed_by) || // Admin sees all added by admin
+    (userRole === 'master' && t.performed_by === user?.id && t.related_user_id) // Master sees what they performed on their resellers
+  );
+
+  const creditedTransactions = transactions.filter(t => 
+    t.transaction_type === 'credit_added' && t.user_id === user?.id
+  );
+  const spentTransactions = transactions.filter(t => 
+    t.transaction_type === 'credit_spent' && t.user_id === user?.id
   );
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader title="Carteira de Créditos" />
 
-      <main className="container mx-auto p-4 sm:p-6 space-y-6"> {/* Ajustado padding */}
+      <main className="container mx-auto p-4 sm:p-6 space-y-6">
         {/* Saldo Card */}
         <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
           <CardHeader>
@@ -332,21 +278,21 @@ export default function Carteira() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl sm:text-5xl font-bold text-primary"> {/* Ajustado tamanho da fonte */}
+              <span className="text-4xl sm:text-5xl font-bold text-primary">
                 {userRole === 'admin' ? '∞' : creditBalance ?? 0}
               </span>
-              <span className="text-lg sm:text-xl text-muted-foreground"> {/* Ajustado tamanho da fonte */}
+              <span className="text-lg sm:text-xl text-muted-foreground">
                 {userRole === 'admin' ? 'Ilimitado' : 'créditos'}
               </span>
             </div>
-            {userRole === 'admin' && (
-              <div className="flex flex-col sm:flex-row gap-2 mt-4"> {/* Empilhado em telas pequenas */}
+            {(userRole === 'admin' || userRole === 'master') && (
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
                 <Button 
                   onClick={() => setAddCreditsDialogOpen(true)}
                   className="w-full sm:w-auto"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Créditos a Master
+                  Adicionar Créditos a {userRole === 'admin' ? 'Master' : 'Revendedor'}
                 </Button>
                 <Button 
                   onClick={() => setRemoveCreditsDialogOpen(true)}
@@ -354,32 +300,32 @@ export default function Carteira() {
                   className="w-full sm:w-auto"
                 >
                   <Coins className="mr-2 h-4 w-4" />
-                  Remover Créditos de Master
+                  Remover Créditos de {userRole === 'admin' ? 'Master' : 'Revendedor'}
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Histórico de Adições/Remoções pelos Admins (only for Admins) */}
-        {userRole === 'admin' && (
+        {/* Histórico de Gerenciamento de Créditos (for Admins and Masters) */}
+        {(userRole === 'admin' || userRole === 'master') && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Coins className="h-5 w-5 text-blue-600" />
-                Histórico de Créditos Gerenciados por Administradores
+                Histórico de Gerenciamento de Créditos
               </CardTitle>
               <CardDescription>
-                Registro de todas as adições e remoções de créditos feitas por administradores
+                Registro de todas as adições e remoções de créditos feitas por {userRole === 'admin' ? 'administradores' : 'você'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
-                <Table className="min-w-max"> {/* Adicionado min-w-max */}
+              <div className="rounded-lg border overflow-x-auto">
+                <Table className="min-w-max">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="whitespace-nowrap">Data</TableHead>
-                      <TableHead className="whitespace-nowrap">Administrador</TableHead>
+                      <TableHead className="whitespace-nowrap">{userRole === 'admin' ? 'Administrador' : 'Ação por'}</TableHead>
                       <TableHead className="whitespace-nowrap">Ação/Descrição</TableHead>
                       <TableHead className="text-right whitespace-nowrap">Quantidade</TableHead>
                       <TableHead className="text-right whitespace-nowrap">Saldo Após</TableHead>
@@ -394,19 +340,20 @@ export default function Carteira() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ) : adminAddedTransactions.length === 0 ? (
+                    ) : managedCreditTransactions.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           Nenhuma adição ou remoção de crédito registrada
                         </TableCell>
                       </TableRow>
                     ) : (
-                      adminAddedTransactions.map((transaction) => {
+                      managedCreditTransactions.map((transaction) => {
                         const isAddition = transaction.amount > 0;
-                        const masterName = transaction.master_profile?.full_name || 'N/A';
+                        const performedByName = transaction.performed_by_profile?.full_name || 'N/A';
+                        const targetUserName = transaction.target_user_profile?.full_name || 'N/A';
                         const actionText = isAddition 
-                          ? `Adicionando crédito para ${masterName}`
-                          : `Removendo crédito de ${masterName}`;
+                          ? `Adicionando crédito para ${targetUserName}`
+                          : `Removendo crédito de ${targetUserName}`;
                         
                         return (
                           <TableRow key={transaction.id}>
@@ -414,7 +361,7 @@ export default function Carteira() {
                               {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
                             </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">
-                              {transaction.admin_profile?.full_name || 'N/A'}
+                              {performedByName}
                             </TableCell>
                             <TableCell className="whitespace-nowrap">{actionText}</TableCell>
                             <TableCell className="text-right whitespace-nowrap">
@@ -449,8 +396,8 @@ export default function Carteira() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
-                <Table className="min-w-max"> {/* Adicionado min-w-max */}
+              <div className="rounded-lg border overflow-x-auto">
+                <Table className="min-w-max">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="whitespace-nowrap">Data</TableHead>
@@ -516,8 +463,8 @@ export default function Carteira() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-x-auto"> {/* Adicionado overflow-x-auto */}
-              <Table className="min-w-max"> {/* Adicionado min-w-max */}
+            <div className="rounded-lg border overflow-x-auto">
+              <Table className="min-w-max">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="whitespace-nowrap">Data</TableHead>
@@ -551,7 +498,7 @@ export default function Carteira() {
                         <TableCell className="whitespace-nowrap">{transaction.description}</TableCell>
                         {userRole === 'admin' && (
                           <TableCell className="text-muted-foreground whitespace-nowrap">
-                            {transaction.master_profile?.full_name || 'N/A'}
+                            {transaction.performed_by_profile?.full_name || 'N/A'}
                           </TableCell>
                         )}
                         <TableCell className="text-right whitespace-nowrap">
@@ -572,27 +519,27 @@ export default function Carteira() {
         </Card>
       </main>
 
-      {/* Add Credits Dialog (Admin only) */}
+      {/* Add Credits Dialog (Admin/Master) */}
       <Dialog open={addCreditsDialogOpen} onOpenChange={setAddCreditsDialogOpen}>
-        <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto"> {/* Adicionado max-h e overflow-y-auto */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adicionar Créditos</DialogTitle>
             <DialogDescription>
-              Adicione créditos a um usuário master específico
+              Adicione créditos a um usuário {userRole === 'admin' ? 'master' : 'revendedor'} específico
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="master">Usuário Master</Label>
-              <Select value={selectedMasterId} onValueChange={setSelectedMasterId}>
+              <Label htmlFor="targetUser">Usuário {userRole === 'admin' ? 'Master' : 'Revendedor'}</Label>
+              <Select value={selectedTargetUserId} onValueChange={setSelectedTargetUserId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione um master" />
+                  <SelectValue placeholder={`Selecione um ${userRole === 'admin' ? 'master' : 'revendedor'}`} />
                 </SelectTrigger>
                 <SelectContent>
-                  {masterUsers.map((master) => (
-                    <SelectItem key={master.user_id} value={master.user_id}>
-                      {master.full_name}
+                  {managedUsers.map((managedUser) => (
+                    <SelectItem key={managedUser.user_id} value={managedUser.user_id}>
+                      {managedUser.full_name} ({managedUser.role === 'admin' ? 'Admin' : managedUser.role === 'master' ? 'Master' : 'Revendedor'})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -613,7 +560,7 @@ export default function Carteira() {
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <Button
               type="button"
               variant="outline"
@@ -630,27 +577,27 @@ export default function Carteira() {
         </DialogContent>
       </Dialog>
 
-      {/* Remove Credits Dialog (Admin only) */}
+      {/* Remove Credits Dialog (Admin/Master) */}
       <Dialog open={removeCreditsDialogOpen} onOpenChange={setRemoveCreditsDialogOpen}>
-        <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto"> {/* Adicionado max-h e overflow-y-auto */}
+        <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Remover Créditos</DialogTitle>
             <DialogDescription>
-              Remova créditos de um usuário master específico
+              Remova créditos de um usuário {userRole === 'admin' ? 'master' : 'revendedor'} específico
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="remove-master">Usuário Master</Label>
-              <Select value={selectedRemoveMasterId} onValueChange={setSelectedRemoveMasterId}>
+              <Label htmlFor="remove-targetUser">Usuário {userRole === 'admin' ? 'Master' : 'Revendedor'}</Label>
+              <Select value={selectedRemoveTargetUserId} onValueChange={setSelectedRemoveTargetUserId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione um master" />
+                  <SelectValue placeholder={`Selecione um ${userRole === 'admin' ? 'master' : 'revendedor'}`} />
                 </SelectTrigger>
                 <SelectContent>
-                  {masterUsers.map((master) => (
-                    <SelectItem key={master.user_id} value={master.user_id}>
-                      {master.full_name}
+                  {managedUsers.map((managedUser) => (
+                    <SelectItem key={managedUser.user_id} value={managedUser.user_id}>
+                      {managedUser.full_name} ({managedUser.role === 'admin' ? 'Admin' : managedUser.role === 'master' ? 'Master' : 'Revendedor'})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -671,7 +618,7 @@ export default function Carteira() {
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <Button
               type="button"
               variant="outline"
