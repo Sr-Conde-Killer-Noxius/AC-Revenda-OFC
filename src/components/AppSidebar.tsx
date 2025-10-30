@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAllPageAccess } from "@/hooks/usePageAccessControl";
 
 const allMenuItems = [
-  { title: "Meu Perfil", url: "/profile", icon: User }, // Moved to first position and updated
+  { title: "Meu Perfil", url: "/profile", icon: User },
   { title: "Revenda", url: "/revenda", icon: UsersRound },
   { title: "Planos", url: "/planos", icon: Package },
   { title: "Carteira", url: "/carteira", icon: Wallet },
@@ -26,16 +26,13 @@ const allMenuItems = [
   { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
   { title: "Webhooks", url: "/webhooks", icon: Webhook },
   { title: "Acerto Certo", url: "/settings/acerto-certo-integration", icon: Link2 },
-  // Removed "Configurações" as it's now "Meu Perfil"
 ];
 
 export function AppSidebar() {
   const { signOut, user, userRole } = useAuth();
   const { data: allowedPages = [], isLoading } = useAllPageAccess(userRole);
 
-  // Filter menu items based on user role and dynamic permissions
   const getMenuItems = () => {
-    // Admin sempre vê tudo + controle de páginas
     if (userRole === 'admin') {
       return [
         ...allMenuItems,
@@ -43,12 +40,10 @@ export function AppSidebar() {
       ];
     }
     
-    // Para master e reseller, filtrar baseado nas permissões do banco
     if (userRole === 'master' || userRole === 'reseller') {
       const allowedUrls = allowedPages.map((p) => p.page_url);
       
-      // Meu Perfil sempre disponível
-      const alwaysAvailable = ['/', '/profile']; // Updated to /profile
+      const alwaysAvailable = ['/', '/profile'];
       
       return allMenuItems.filter((item) => 
         alwaysAvailable.includes(item.url) || allowedUrls.includes(item.url)
@@ -70,7 +65,7 @@ export function AppSidebar() {
           <div>
             <h2 className="text-sm font-semibold text-sidebar-foreground">Painel Revenda</h2>
             <p className="text-xs text-muted-foreground">Acerto Certo</p>
-            <p className="text-xs text-muted-foreground">1.0.0.1.0</p> {/* Versão adicionada aqui */}
+            <p className="text-xs text-muted-foreground">1.0.0.1.0</p>
           </div>
         </div>
       </SidebarHeader>
@@ -99,10 +94,23 @@ export function AppSidebar() {
             ))}
           </SidebarMenu>
         </SidebarGroup>
+
+        {/* Novo grupo para ações como Sair */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Conta</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-accent/50">
+                <LogOut className="h-4 w-4" />
+                <span>Sair</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 mb-4"> {/* Adicionado mb-4 para espaçamento */}
+        <div className="flex items-center gap-3 mb-4">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
               {user?.email?.substring(0, 2).toUpperCase() || "AC"}
@@ -114,17 +122,8 @@ export function AppSidebar() {
             </p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:text-sidebar-foreground"
-            onClick={signOut}
-            title="Sair"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
-        <div className="text-center text-muted-foreground text-xs space-y-1"> {/* Ajustado para text-xs */}
+        <div className="text-center text-muted-foreground text-xs space-y-1">
           <p>Desenvolvido por</p>
           <a 
             href="https://digitalsouloficial.vercel.app/" 
