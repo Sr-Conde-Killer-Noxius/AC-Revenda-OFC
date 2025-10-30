@@ -280,6 +280,7 @@ export default function AcertoCertoIntegration() {
   "email": "revendedor@email.com",
   "password": "senha-usada-na-criacao",
   "fullName": "Nome Completo Revendedor",
+  "vencimento": "Vencimento do Crédito",
   "role": "user",
   "phone": "+5511999998888",
   "tax_id": "12345678900"
