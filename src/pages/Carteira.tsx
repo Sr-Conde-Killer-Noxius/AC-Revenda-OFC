@@ -101,7 +101,6 @@ export default function Carteira() {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      // Admin sees all transactions, Master sees only their own or related to their created masters
       if (userRole !== 'admin') {
         const { data: createdMastersProfiles, error: createdMastersError } = await supabase
           .from('profiles')
@@ -113,14 +112,18 @@ export default function Carteira() {
 
         const relevantUserIds = [...new Set([user.id, ...createdMasterIds])];
 
-        query = query.or(`user_id.in.(${relevantUserIds.join(',')}),and(performed_by.eq.${user.id},related_user_id.in.(${createdMasterIds.join(',')}))`);
+        query = supabase
+          .from('credit_transactions')
+          .select('*')
+          .or(`user_id.in.(${relevantUserIds.join(',')}),and(performed_by.eq.${user.id},related_user_id.in.(${createdMasterIds.join(',')}))`)
+          .order('created_at', { ascending: false })
+          .limit(100);
       }
 
       const { data: transactionsData, error: transactionsError } = await query;
 
       if (transactionsError) throw transactionsError;
 
-      // Collect all unique user_ids, performed_by, and related_user_id from transactions
       const allInvolvedIds = new Set<string>();
       transactionsData?.forEach(t => {
         allInvolvedIds.add(t.user_id);
@@ -713,7 +716,7 @@ export default function Carteira() {
                       <TableCell colSpan={userRole === 'admin' ? 5 : 4} className="text-center py-8">
                         <div className="flex justify-center">
                           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                        </div>
+                          </div>
                       </TableCell>
                     </TableRow>
                   ) : spentTransactions.length === 0 ? (
@@ -828,9 +831,9 @@ export default function Carteira() {
       </Dialog>
 
       {/* Remove Credits Dialog (Admin only) */}
-      {userRole === 'admin' ? (
-        <Fragment> {/* Envolvido em Fragment para resolver erro de sintaxe JSX */}
-          <Dialog open={removeCreditsDialogOpen} onOpenChange={setRemoveCreditsDialogOpen}>
+      {userRole === 'admin' && removeCreditsDialogOpen ? ( // Render Dialog only if user is admin AND dialog is open
+        <Dialog open={removeCreditsDialogOpen} onOpenChange={setRemoveCreditsDialogOpen}>
+          <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Remover Créditos</DialogTitle>
               <DialogDescription>
@@ -889,8 +892,8 @@ export default function Carteira() {
               {submitting ? "Removendo..." : "Remover Créditos"}
             </Button>
           </DialogFooter>
-        </Dialog>
-        </Fragment>
+        </DialogContent>
+      </Dialog>
       ) : null}
     </div>
   );
