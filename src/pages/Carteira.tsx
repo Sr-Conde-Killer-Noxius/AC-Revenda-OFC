@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Coins, Plus, TrendingDown, TrendingUp, Repeat2 } from "lucide-react";
+import { Coins, Plus, TrendingDown, TrendingUp, Repeat2, UserCog, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface CreditData {
@@ -45,6 +45,13 @@ interface MasterUser {
   full_name: string;
 }
 
+interface MasterUserDetail {
+  user_id: string;
+  full_name: string;
+  credit_balance: number;
+  last_login_at: string | null;
+}
+
 export default function Carteira() {
   const { userRole, user } = useAuth();
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
@@ -60,6 +67,9 @@ export default function Carteira() {
   const [selectedRemoveMasterId, setSelectedRemoveMasterId] = useState("");
   const [removeCreditAmount, setRemoveCreditAmount] = useState("");
   const { toast } = useToast();
+
+  const [masterUsersWithDetails, setMasterUsersWithDetails] = useState<MasterUserDetail[]>([]);
+  const [loadingMasterUsers, setLoadingMasterUsers] = useState(true);
 
   const loadCreditBalance = async () => {
     if (!user || userRole === 'reseller') return;
@@ -238,11 +248,52 @@ export default function Carteira() {
     }
   };
 
+  const loadMasterUsersWithDetails = async () => {
+    if (userRole !== 'admin' || !user) {
+      setLoadingMasterUsers(false);
+      return;
+    }
+    try {
+      setLoadingMasterUsers(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("Não autenticado");
+      }
+
+      const { data: result, error } = await supabase.functions.invoke(
+        "get-master-user-details",
+        {
+          headers: {
+            'Authorization': `Bearer ${sessionData.session.access_token}`
+          }
+        }
+      );
+
+      if (error) throw error;
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
+      setMasterUsersWithDetails(result.masters || []);
+    } catch (error: any) {
+      console.error('Error loading master users with details:', error);
+      toast({
+        title: "Erro ao carregar usuários Master",
+        description: error.message,
+        variant: "destructive",
+      });
+      setMasterUsersWithDetails([]);
+    } finally {
+      setLoadingMasterUsers(false);
+    }
+  };
+
   useEffect(() => {
     loadCreditBalance();
     loadTransactions();
     if (userRole === 'admin') {
-      loadMasterUsers();
+      loadMasterUsers(); // Keep this for the add/remove dialogs
+      loadMasterUsersWithDetails(); // New call for the new section
     } else if (userRole === 'master') {
       loadMasterCreatedUsers();
     }
@@ -326,6 +377,9 @@ export default function Carteira() {
       setCreditAmount("");
       loadCreditBalance();
       loadTransactions();
+      if (userRole === 'admin') {
+        loadMasterUsersWithDetails(); // Refresh master user details
+      }
     } catch (error: any) {
       console.error("Error adding credits:", error);
       toast({
@@ -386,6 +440,9 @@ export default function Carteira() {
       setRemoveCreditAmount("");
       loadCreditBalance();
       loadTransactions();
+      if (userRole === 'admin') {
+        loadMasterUsersWithDetails(); // Refresh master user details
+      }
     } catch (error: any) {
       console.error("Error adding credits:", error);
       toast({
@@ -465,6 +522,69 @@ export default function Carteira() {
           </CardContent>
         </Card>
 
+        {/* Nova seção para Usuários Masters (apenas para Admin) */}
+        {userRole === 'admin' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5 text-blue-500" />
+                Usuários Masters
+              </CardTitle>
+              <CardDescription>
+                Visão geral de todos os usuários com nível Master no sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg border overflow-x-auto">
+                <Table className="min-w-max">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Nome do Master</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Créditos Atuais</TableHead>
+                      <TableHead className="whitespace-nowrap">Último Login</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingMasterUsers ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-8">
+                          <div className="flex justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : masterUsersWithDetails.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                          Nenhum usuário Master encontrado
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      masterUsersWithDetails.map((master) => (
+                        <TableRow key={master.user_id}>
+                          <TableCell className="font-medium whitespace-nowrap">
+                            {master.full_name}
+                          </TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <Badge variant="default" className="bg-primary">
+                              {master.credit_balance}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {master.last_login_at
+                              ? format(new Date(master.last_login_at), 'dd/MM/yyyy HH:mm')
+                              : 'Nunca logou'}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Histórico de Créditos Gerenciados por Administradores (Admin only) */}
         {userRole === 'admin' && (
           <Card>
@@ -494,7 +614,7 @@ export default function Carteira() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
                           <div className="flex justify-center">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -575,7 +695,7 @@ export default function Carteira() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
                           <div className="flex justify-center">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -643,7 +763,7 @@ export default function Carteira() {
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8">
                           <div className="flex justify-center">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -715,7 +835,7 @@ export default function Carteira() {
                     <TableRow>
                       <TableCell colSpan={userRole === 'admin' ? 5 : 4} className="text-center py-8">
                         <div className="flex justify-center">
-                          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                          <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
                           </div>
                       </TableCell>
                     </TableRow>
@@ -893,7 +1013,6 @@ export default function Carteira() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
       ) : null}
     </div>
   );
