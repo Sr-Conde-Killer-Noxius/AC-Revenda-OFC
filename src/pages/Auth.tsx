@@ -67,7 +67,7 @@ export default function Auth() {
             </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-foreground">Acerto Certo</h1>
+            <h1 className="text-3xl font-bold text-foreground">Painel Acerto Certo</h1>
             <p className="text-muted-foreground">Sistema de Cobrança e Gerenciamento</p>
           </div>
         </div>
