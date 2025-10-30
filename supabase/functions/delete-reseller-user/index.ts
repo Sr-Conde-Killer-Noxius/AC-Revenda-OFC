@@ -96,9 +96,9 @@ serve(async (req) => {
 
     console.log('User deleted successfully');
 
-    // Enviar webhook para Acerto Certo de forma assíncrona (fire-and-forget)
-    (async () => {
-      let targetWebhookUrl = 'not_configured'; // Default value
+    // Enviar webhook para Acerto Certo e registrar histórico
+    await (async () => {
+      let targetWebhookUrl = 'not_configured';
       const payload = {
         eventType: 'delete_user',
         userId: userId
@@ -115,72 +115,51 @@ serve(async (req) => {
           targetWebhookUrl = config.webhook_url;
           console.log('Sending delete_user webhook to Acerto Certo:', targetWebhookUrl);
           
-          fetch(targetWebhookUrl, {
+          const webhookResponse = await fetch(targetWebhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
             signal: AbortSignal.timeout(10000)
-          }).then(async (webhookResponse) => {
-            const responseBody = await webhookResponse.text();
-            const statusCode = webhookResponse.status;
-
-            console.log('Webhook response:', { statusCode, responseBody });
-
-            // Registrar histórico do webhook
-            await supabaseAdmin
-              .from('acerto_certo_webhook_history')
-              .insert({
-                event_type: 'delete_user',
-                target_url: targetWebhookUrl,
-                payload: payload,
-                response_status_code: statusCode,
-                response_body: responseBody,
-                revenda_user_id: userId
-              });
-
-            console.log('Webhook history logged successfully');
-          }).catch(async (webhookError) => {
-            console.error('Error sending webhook to Acerto Certo:', webhookError);
-            
-            // Registrar falha no histórico
-            try {
-              await supabaseAdmin
-                .from('acerto_certo_webhook_history')
-                .insert({
-                  event_type: 'delete_user',
-                  target_url: targetWebhookUrl, // Use the determined targetWebhookUrl
-                  payload: payload,
-                  response_status_code: 500,
-                  response_body: webhookError instanceof Error ? webhookError.message : 'Unknown error',
-                  revenda_user_id: userId
-                });
-            } catch (logError) {
-              console.error('Failed to log webhook error:', logError);
-            }
           });
-        } else {
-          console.log('No Acerto Certo webhook URL configured, skipping webhook. Logging to history anyway.');
-          // Log to history even if webhook URL is not configured
+
+          const responseBody = await webhookResponse.text();
+          const statusCode = webhookResponse.status;
+
+          console.log('Webhook response:', { statusCode, responseBody });
+
           await supabaseAdmin
             .from('acerto_certo_webhook_history')
             .insert({
               event_type: 'delete_user',
-              target_url: targetWebhookUrl, // Will be 'not_configured'
+              target_url: targetWebhookUrl,
               payload: payload,
-              response_status_code: 200, // Assume success for logging purposes if no webhook was sent
+              response_status_code: statusCode,
+              response_body: responseBody,
+              revenda_user_id: userId
+            });
+
+          console.log('Webhook history logged successfully');
+        } else {
+          console.log('No Acerto Certo webhook URL configured, skipping webhook. Logging to history anyway.');
+          await supabaseAdmin
+            .from('acerto_certo_webhook_history')
+            .insert({
+              event_type: 'delete_user',
+              target_url: targetWebhookUrl,
+              payload: payload,
+              response_status_code: 200,
               response_body: 'Webhook URL not configured, no external call made.',
               revenda_user_id: userId
             });
         }
       } catch (error) {
         console.error('Error in webhook async function:', error);
-        // Ensure logging even if initial config fetch fails
         try {
           await supabaseAdmin
             .from('acerto_certo_webhook_history')
             .insert({
               event_type: 'delete_user',
-              target_url: targetWebhookUrl, // Will be 'not_configured' or the fetched URL if it failed later
+              target_url: targetWebhookUrl,
               payload: payload,
               response_status_code: 500,
               response_body: error instanceof Error ? error.message : 'Unknown error during webhook processing.',
@@ -189,6 +168,7 @@ serve(async (req) => {
         } catch (logError) {
           console.error('Failed to log webhook error during initial webhook processing error:', logError);
         }
+        throw error; // Re-throw to be caught by the main try-catch block
       }
     })();
 
