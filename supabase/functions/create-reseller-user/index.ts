@@ -119,6 +119,10 @@ serve(async (req) => {
 
     console.log('User created successfully:', newUser.user?.id);
 
+    // Set credit expiry date (30 days from now)
+    const creditExpiryDate = new Date();
+    creditExpiryDate.setDate(creditExpiryDate.getDate() + 30);
+
     // Create profile with created_by tracking and email
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -127,7 +131,8 @@ serve(async (req) => {
         full_name: fullName,
         email: email,
         created_by: requestingUser.id,
-        status: 'active'
+        status: 'active',
+        credit_expiry_date: creditExpiryDate.toISOString() // Set expiry date here
       }, { onConflict: 'user_id' });
 
     if (profileError) {
@@ -197,20 +202,6 @@ serve(async (req) => {
       console.log('Credit deducted successfully');
     }
 
-    // Set credit expiry date (30 days from now)
-    const creditExpiryDate = new Date();
-    creditExpiryDate.setDate(creditExpiryDate.getDate() + 30);
-
-    // Update profile with credit_expiry_date
-    const { error: updateCreditError } = await supabaseAdmin
-      .from('profiles')
-      .update({ credit_expiry_date: creditExpiryDate.toISOString() })
-      .eq('user_id', newUser.user!.id);
-
-    if (updateCreditError) {
-      console.error('Error updating credit_expiry_date:', updateCreditError);
-    }
-
     // Enviar webhook para Acerto Certo (não bloqueia a resposta de sucesso)
     (async () => {
       try {
@@ -226,7 +217,7 @@ serve(async (req) => {
           // Buscar dados adicionais do perfil criado
           const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('phone, cpf')
+            .select('phone, cpf, credit_expiry_date') // Incluir credit_expiry_date
             .eq('user_id', newUser.user!.id)
             .single();
 
@@ -239,6 +230,7 @@ serve(async (req) => {
             email: email,
             password: password,
             fullName: fullName,
+            vencimento: profile?.credit_expiry_date ? new Date(profile.credit_expiry_date).toISOString().split('T')[0] : null, // Formato YYYY-MM-DD
             role: 'user',
             phone: profile?.phone || null,
             tax_id: profile?.cpf || null
