@@ -820,7 +820,7 @@ export default function Carteira() {
                 {submitting ? "Removendo..." : "Remover Créditos"}
               </Button>
             </DialogFooter>
-          </DialogFooter>
+          </DialogContent>
         </Dialog>
       )}
     </div>
