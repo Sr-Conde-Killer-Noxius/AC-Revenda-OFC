@@ -70,7 +70,7 @@ export function AppSidebar() {
           <div>
             <h2 className="text-sm font-semibold text-sidebar-foreground">Painel Revenda</h2>
             <p className="text-xs text-muted-foreground">Acerto Certo</p>
-            <p className="text-xs text-muted-foreground">1.0.0.0.0</p> {/* Versão adicionada aqui */}
+            <p className="text-xs text-muted-foreground">1.0.0.1.0</p> {/* Versão adicionada aqui */}
           </div>
         </div>
       </SidebarHeader>
