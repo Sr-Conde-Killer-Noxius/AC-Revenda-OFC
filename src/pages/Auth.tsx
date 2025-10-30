@@ -122,6 +122,19 @@ export default function Auth() {
             </form>
           </CardContent>
         </Card>
+
+        <div className="text-center text-muted-foreground text-sm space-y-1">
+          <p>Desenvolvido por</p>
+          <a 
+            href="https://digitalsouloficial.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-primary hover:underline"
+          >
+            Digital Soul Solutions
+          </a>
+          <p>CNPJ: 58.870.696/0001-97</p>
+        </div>
       </div>
     </div>
   );
