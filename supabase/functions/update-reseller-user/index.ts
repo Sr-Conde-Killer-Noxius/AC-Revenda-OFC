@@ -176,79 +176,64 @@ serve(async (req) => {
       if (status !== undefined && currentStatus !== status && (status === 'inactive' || status === 'suspended' || status === 'active')) {
         console.log(`Status changed for user ${userId} from ${currentStatus} to ${status}. Sending webhook...`);
         
-        await (async () => {
-          let targetWebhookUrl = 'not_configured';
-          const webhookPayload = {
-            eventType: 'update_user_status',
-            userId: userId,
-            newStatus: status
-          };
+        let targetWebhookUrl = 'not_configured';
+        const webhookPayload = {
+          eventType: 'update_user_status',
+          userId: userId,
+          newStatus: status
+        };
+        let webhookStatusCode = 200;
+        let webhookResponseBody = 'Webhook URL not configured, no external call made.';
 
-          try {
-            const { data: config } = await supabaseAdmin
-              .from('webhook_configs')
-              .select('webhook_url')
-              .eq('config_key', 'acerto_certo_webhook_url')
-              .maybeSingle();
+        try {
+          const { data: config } = await supabaseAdmin
+            .from('webhook_configs')
+            .select('webhook_url')
+            .eq('config_key', 'acerto_certo_webhook_url')
+            .maybeSingle();
 
-            if (config?.webhook_url) {
-              targetWebhookUrl = config.webhook_url;
-              const response = await fetch(targetWebhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(webhookPayload),
-                signal: AbortSignal.timeout(10000)
-              });
-              const body = await response.text();
-              const { error: historyError } = await supabaseAdmin.from('acerto_certo_webhook_history').insert({
-                event_type: 'update_user_status',
-                target_url: targetWebhookUrl,
-                payload: webhookPayload,
-                response_status_code: response.status,
-                response_body: body,
-                revenda_user_id: userId
-              });
-              
-              if (historyError) {
-                console.error(`Failed to insert webhook history for update_user_status:`, historyError);
-                throw historyError;
-              } else {
-                console.log(`Webhook sent: Status ${response.status} for update_user_status, user ${userId}`);
-              }
-            } else {
-              console.warn(`Acerto Certo webhook URL not configured. Skipping webhook for user ${userId}. Logging to history anyway.`);
-              await supabaseAdmin.from('acerto_certo_webhook_history').insert({
-                event_type: 'update_user_status',
-                target_url: targetWebhookUrl,
-                payload: webhookPayload,
-                response_status_code: 200,
-                response_body: 'Webhook URL not configured, no external call made.',
-                revenda_user_id: userId
-              });
-            }
-          } catch (webhookError: any) {
-            console.error(`Error during webhook preparation for user ${userId}:`, webhookError.message);
-            try {
-              await supabaseAdmin.from('acerto_certo_webhook_history').insert({
-                event_type: 'update_user_status',
-                target_url: targetWebhookUrl,
-                payload: webhookPayload,
-                response_status_code: 500,
-                response_body: webhookError instanceof Error ? webhookError.message : 'Unknown error during webhook processing.',
-                revenda_user_id: userId
-              });
-            } catch (logError) {
-              console.error('Failed to log webhook error during initial webhook processing error:', logError);
-            }
-            throw webhookError;
+          if (config?.webhook_url) {
+            targetWebhookUrl = config.webhook_url;
+            const response = await fetch(targetWebhookUrl, { // AGORA AWAIT AQUI
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+              signal: AbortSignal.timeout(10000)
+            });
+            webhookResponseBody = await response.text();
+            webhookStatusCode = response.status;
+            console.log(`Webhook sent: Status ${response.status} for update_user_status, user ${userId}`);
+          } else {
+            console.warn(`Acerto Certo webhook URL not configured. Skipping webhook for user ${userId}.`);
           }
-        })();
+        } catch (webhookError: any) {
+          console.error(`Error during webhook preparation for user ${userId}:`, webhookError.message);
+          webhookStatusCode = 500;
+          webhookResponseBody = webhookError instanceof Error ? webhookError.message : 'Unknown error during webhook processing.';
+        } finally {
+          // Sempre logar no histórico, independentemente do sucesso ou falha do fetch
+          try {
+            const { error: historyError } = await supabaseAdmin.from('acerto_certo_webhook_history').insert({
+              event_type: 'update_user_status',
+              target_url: targetWebhookUrl,
+              payload: webhookPayload,
+              response_status_code: webhookStatusCode,
+              response_body: webhookResponseBody,
+              revenda_user_id: userId
+            });
+            if (historyError) {
+              console.error(`Failed to insert webhook history for update_user_status:`, historyError);
+            }
+          } catch (logError) {
+            console.error('Failed to log webhook error during initial webhook processing error:', logError);
+          }
+        }
       }
 
       // If creditExpiryDate was updated, trigger check-expired-credits function
       if (creditExpiryDate !== undefined) {
         console.log(`creditExpiryDate updated for user ${userId}. Invoking check-expired-credits...`);
-        await (async () => {
+        await (async () => { // AGORA AWAIT AQUI
           try {
             const { data: checkResult, error: checkError } = await supabaseAdmin.functions.invoke(
               "check-expired-credits",
