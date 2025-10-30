@@ -369,7 +369,7 @@ export default function Carteira() {
 
       toast({
         title: "Créditos adicionados com sucesso!",
-        description: `${creditAmount} crédito(s) adicionado(s) a ${result.targetUser || selectedMasterId}`,
+        description: `${creditAmount} crédito(s) adicionado(s) com sucesso.`, // Alterado aqui
       });
 
       setAddCreditsDialogOpen(false);
