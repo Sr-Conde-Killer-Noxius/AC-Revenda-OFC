@@ -589,7 +589,11 @@ export default function Carteira() {
                           <TableCell className="whitespace-nowrap">
                             {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">{transaction.description}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {transaction.transaction_type === 'credit_added' && transaction.user_id === user?.id && transaction.description.startsWith('Recebido de Master')
+                              ? 'Recebido do seu Master'
+                              : transaction.description}
+                          </TableCell>
                           <TableCell className="text-right whitespace-nowrap">
                             <Badge 
                               variant={transaction.amount > 0 ? "default" : "destructive"} 
@@ -782,47 +786,47 @@ export default function Carteira() {
                         <SelectItem key={master.user_id} value={master.user_id}>
                           {master.full_name}
                         </SelectItem>
-                      ))}
-                    </Fragment> {/* Fechamento do Fragment */}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="remove-amount">Quantidade de Créditos</Label>
-                <Input
-                  id="remove-amount"
-                  type="number"
-                  min="1"
-                  value={removeCreditAmount}
-                  onChange={(e) => setRemoveCreditAmount(e.target.value)}
-                  placeholder="Ex: 5"
-                  className="w-full"
-                  disabled={submitting}
-                />
-              </div>
+                      ))
+                    )}
+                  </Fragment> {/* Fechamento do Fragment */}
+                </SelectContent>
+              </Select>
             </div>
 
-            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setRemoveCreditsDialogOpen(false)}
+            <div className="space-y-2">
+              <Label htmlFor="remove-amount">Quantidade de Créditos</Label>
+              <Input
+                id="remove-amount"
+                type="number"
+                min="1"
+                value={removeCreditAmount}
+                onChange={(e) => setRemoveCreditAmount(e.target.value)}
+                placeholder="Ex: 5"
+                className="w-full"
                 disabled={submitting}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleRemoveCredits} 
-                disabled={submitting || !selectedRemoveMasterId || !removeCreditAmount}
-                variant="destructive"
-                className="w-full sm:w-auto"
-              >
-                {submitting ? "Removendo..." : "Remover Créditos"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRemoveCreditsDialogOpen(false)}
+              disabled={submitting}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleRemoveCredits} 
+              disabled={submitting || !selectedRemoveMasterId || !removeCreditAmount}
+              variant="destructive"
+              className="w-full sm:w-auto"
+            >
+              {submitting ? "Removendo..." : "Remover Créditos"}
+            </Button>
+          </DialogFooter>
         </Dialog>
       )}
     </div>
