@@ -96,10 +96,10 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Separador visual antes do botão Sair */}
-      <div className="h-px bg-sidebar-border my-4 mx-4" />
+      <div className="h-px bg-sidebar-border mx-4" />
 
       {/* Botão Sair - Movido para fora do SidebarContent */}
-      <SidebarMenu>
+      <SidebarMenu className="py-2 mb-2"> {/* Adicionado py-2 e mb-2 para espaçamento */}
         <SidebarMenuItem>
           <SidebarMenuButton onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-accent/50">
             <LogOut className="h-4 w-4" />
