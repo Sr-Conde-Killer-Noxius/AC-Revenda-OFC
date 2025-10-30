@@ -614,7 +614,7 @@ export default function Carteira() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
                           <div className="flex justify-center">
-                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -695,7 +695,7 @@ export default function Carteira() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
                           <div className="flex justify-center">
-                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -763,7 +763,7 @@ export default function Carteira() {
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8">
                           <div className="flex justify-center">
-                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                            <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -835,7 +835,7 @@ export default function Carteira() {
                     <TableRow>
                       <TableCell colSpan={userRole === 'admin' ? 5 : 4} className="text-center py-8">
                         <div className="flex justify-center">
-                          <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                          <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                           </div>
                       </TableCell>
                     </TableRow>
