@@ -507,11 +507,12 @@ export default function Carteira() {
                     ) : (
                       managedCreditsHistory.map((transaction) => {
                         const isAddition = transaction.amount > 0;
-                        const targetUserName = transaction.target_user_profile?.full_name || transaction.related_user_id || 'N/A';
-                        const initiatorName = transaction.admin_profile?.full_name || transaction.master_profile?.full_name || 'N/A';
+                        const targetUserName = transaction.master_profile?.full_name || transaction.user_id; // Use master_profile for the target user
                         
                         let descriptionText = transaction.description;
-                        if (userRole === 'master' && transaction.transaction_type === 'credit_added' && transaction.performed_by !== user?.id) {
+                        if (userRole === 'admin') { // Apply this logic only for admin
+                          descriptionText = `${transaction.description} para ${targetUserName}`;
+                        } else if (userRole === 'master' && transaction.transaction_type === 'credit_added' && transaction.performed_by !== user?.id) {
                           descriptionText = `Recebido de Admin para ${transaction.master_profile?.full_name || transaction.user_id}`;
                         } else if (userRole === 'master' && transaction.transaction_type === 'credit_added' && transaction.performed_by === user?.id) {
                           descriptionText = `Transferido por você para ${transaction.master_profile?.full_name || transaction.user_id}`;
@@ -525,7 +526,7 @@ export default function Carteira() {
                               {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
                             </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">
-                              {initiatorName}
+                              {transaction.admin_profile?.full_name || 'N/A'}
                             </TableCell>
                             <TableCell className="whitespace-nowrap">{descriptionText}</TableCell>
                             <TableCell className="text-right whitespace-nowrap">
@@ -781,46 +782,46 @@ export default function Carteira() {
                       <SelectItem key={master.user_id} value={master.user_id}>
                         {master.full_name}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="remove-amount">Quantidade de Créditos</Label>
-                <Input
-                  id="remove-amount"
-                  type="number"
-                  min="1"
-                  value={removeCreditAmount}
-                  onChange={(e) => setRemoveCreditAmount(e.target.value)}
-                  placeholder="Ex: 5"
-                  className="w-full"
-                  disabled={submitting}
-                />
-              </div>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
-            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setRemoveCreditsDialogOpen(false)}
+            <div className="space-y-2">
+              <Label htmlFor="remove-amount">Quantidade de Créditos</Label>
+              <Input
+                id="remove-amount"
+                type="number"
+                min="1"
+                value={removeCreditAmount}
+                onChange={(e) => setRemoveCreditAmount(e.target.value)}
+                placeholder="Ex: 5"
+                className="w-full"
                 disabled={submitting}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleRemoveCredits} 
-                disabled={submitting || !selectedRemoveMasterId || !removeCreditAmount}
-                variant="destructive"
-                className="w-full sm:w-auto"
-              >
-                {submitting ? "Removendo..." : "Remover Créditos"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2"> {/* Empilhado em telas pequenas */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRemoveCreditsDialogOpen(false)}
+              disabled={submitting}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleRemoveCredits} 
+              disabled={submitting || !selectedRemoveMasterId || !removeCreditAmount}
+              variant="destructive"
+              className="w-full sm:w-auto"
+            >
+              {submitting ? "Removendo..." : "Remover Créditos"}
+            </Button>
+          </DialogFooter>
         </Dialog>
       )}
     </div>
