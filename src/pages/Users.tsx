@@ -1286,7 +1286,7 @@ export default function Users() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto"> {/* Adicionado max-h e overflow-y-auto */}
           <DialogHeader>
-            <DialogTitle>Novo Revendedor</DialogTitle>
+            <DialogTitle>Novo Usuário</DialogTitle>
             <DialogDescription>
               Crie um novo usuário no sistema
             </DialogDescription>
