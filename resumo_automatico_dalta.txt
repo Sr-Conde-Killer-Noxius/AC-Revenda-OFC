@@ -3377,13 +3377,13 @@ export default function Revenda() {
           error.message?.includes("email_exists")) {
         errorMessage = "Este e-mail já está cadastrado no sistema";
       } else if (error.message?.includes("Only master users")) {
-        errorMessage = "Apenas usuários master podem Criar Usuários";
+        errorMessage = "Apenas usuários master podem criar revendedores";
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       toast({
-        title: "Erro ao Criar Usuário",
+        title: "Erro ao criar revendedor",
         description: errorMessage,
         variant: "destructive",
       });
@@ -3553,7 +3553,7 @@ export default function Revenda() {
           <div>
             <h2 className="text-2xl font-bold text-foreground">Revendedores</h2>
             <p className="text-muted-foreground">
-              Gerencie os Usuários e Revendedores do sistema
+              Gerencie os revendedores do sistema
             </p>
           </div>
           <Button onClick={() => setDialogOpen(true)}>
@@ -3751,7 +3751,7 @@ export default function Revenda() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Criando..." : "Criar Usuário"}
+                {submitting ? "Criando..." : "Criar Revendedor"}
               </Button>
             </DialogFooter>
           </form>

@@ -382,13 +382,13 @@ export default function Users() {
           error.message?.includes("email_exists")) {
         errorMessage = "Este e-mail já está cadastrado no sistema";
       } else if (error.message?.includes("Only master users")) {
-        errorMessage = "Apenas usuários master podem Criar Usuários";
+        errorMessage = "Apenas usuários master podem criar revendedores";
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       toast({
-        title: "Erro ao Criar Usuário",
+        title: "Erro ao criar revendedor",
         description: errorMessage,
         variant: "destructive",
       });
@@ -448,13 +448,13 @@ export default function Users() {
           error.message?.includes("email_exists")) {
         errorMessage = "Este e-mail já está cadastrado no sistema";
       } else if (error.message?.includes("Only master users")) {
-        errorMessage = "Apenas usuários master podem Criar Usuários";
+        errorMessage = "Apenas usuários master podem criar revendedores";
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       toast({
-        title: "Erro ao criar Usuário teste",
+        title: "Erro ao criar revendedor teste",
         description: errorMessage,
         variant: "destructive",
       });
@@ -942,7 +942,7 @@ export default function Users() {
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-foreground">Revendedores</h2> {/* Ajustado tamanho da fonte */}
             <p className="text-sm sm:text-base text-muted-foreground"> {/* Ajustado tamanho da fonte */}
-              Gerencie os Usuários e Revendedores do sistema
+              Gerencie os revendedores do sistema
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
@@ -1275,7 +1275,7 @@ export default function Users() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                {submitting ? "Criando..." : "Criar Usuário Teste"}
+                {submitting ? "Criando..." : "Criar Revendedor Teste"}
               </Button>
             </DialogFooter>
           </form>
@@ -1377,7 +1377,7 @@ export default function Users() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                {submitting ? "Criando..." : "Criar Usuário"}
+                {submitting ? "Criando..." : "Criar Revendedor"}
               </Button>
             </DialogFooter>
           </form>
