@@ -382,13 +382,13 @@ export default function Users() {
           error.message?.includes("email_exists")) {
         errorMessage = "Este e-mail já está cadastrado no sistema";
       } else if (error.message?.includes("Only master users")) {
-        errorMessage = "Apenas usuários master podem Criar Usuárioses";
+        errorMessage = "Apenas usuários master podem criar revendedores";
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       toast({
-        title: "Erro ao Criar Usuários",
+        title: "Erro ao criar revendedor",
         description: errorMessage,
         variant: "destructive",
       });
@@ -448,13 +448,13 @@ export default function Users() {
           error.message?.includes("email_exists")) {
         errorMessage = "Este e-mail já está cadastrado no sistema";
       } else if (error.message?.includes("Only master users")) {
-        errorMessage = "Apenas usuários master podem Criar Usuárioses";
+        errorMessage = "Apenas usuários master podem criar revendedores";
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       toast({
-        title: "Erro ao Criar Usuário Teste",
+        title: "Erro ao criar revendedor teste",
         description: errorMessage,
         variant: "destructive",
       });
@@ -940,9 +940,9 @@ export default function Users() {
       <main className="container mx-auto p-4 sm:p-6"> {/* Ajustado padding */}
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0"> {/* Ajustado para empilhar em telas pequenas */}
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Controle de Usuários e Revendedores</h2> {/* Ajustado tamanho da fonte */}
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Revendedores</h2> {/* Ajustado tamanho da fonte */}
             <p className="text-sm sm:text-base text-muted-foreground"> {/* Ajustado tamanho da fonte */}
-              Gerencie os Usuários e Revendedores do sistema
+              Gerencie os revendedores do sistema
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
@@ -1286,9 +1286,9 @@ export default function Users() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto"> {/* Adicionado max-h e overflow-y-auto */}
           <DialogHeader>
-            <DialogTitle>Novo Usuário</DialogTitle>
+            <DialogTitle>Novo Revendedor</DialogTitle>
             <DialogDescription>
-              Crie um novo usuário no sistema
+              Crie um novo usuário revendedor no sistema
             </DialogDescription>
           </DialogHeader>
 
@@ -1377,7 +1377,7 @@ export default function Users() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                {submitting ? "Criando..." : "Criar Usuário"}
+                {submitting ? "Criando..." : "Criar Revendedor"}
               </Button>
             </DialogFooter>
           </form>

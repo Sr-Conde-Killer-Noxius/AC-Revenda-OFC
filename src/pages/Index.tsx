@@ -7,11 +7,12 @@ export default function Index() {
   const { userRole } = useAuth();
 
   useEffect(() => {
-    // Redirect based on user role
-    if (userRole === 'admin' || userRole === 'master') {
+    // Redirect based on user role avoiding loops with ProtectedRoute
+    if (!userRole) return;
+    if (userRole === 'admin') {
       navigate('/users', { replace: true });
-    } else if (userRole === 'reseller') {
-      navigate('/profile', { replace: true }); // Updated redirect to /profile
+    } else {
+      navigate('/profile', { replace: true });
     }
   }, [userRole, navigate]);
 

@@ -42,6 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth event:", event);
+        
+        // Handle sign out and token errors
+        if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -58,7 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Session error:", error);
+        setSession(null);
+        setUser(null);
+        setUserRole(null);
+        setLoading(false);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -66,6 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchUserRole(session.user.id);
       }
       
+      setLoading(false);
+    }).catch((error) => {
+      console.error("Failed to get session:", error);
+      setSession(null);
+      setUser(null);
+      setUserRole(null);
       setLoading(false);
     });
 

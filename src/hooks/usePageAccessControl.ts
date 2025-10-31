@@ -28,7 +28,7 @@ export function usePageAccess(userRole: string | null, pageUrl: string) {
         .select("is_enabled")
         .eq("role", userRole)
         .eq("page_url", pageUrl)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error checking page access:", error);
@@ -37,8 +37,9 @@ export function usePageAccess(userRole: string | null, pageUrl: string) {
 
       return data?.is_enabled ?? false;
     },
-    enabled: !!userRole,
+    enabled: !!userRole && (userRole === "admin" || userRole === "master" || userRole === "reseller"),
     staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: false,
   });
 }
 
@@ -68,8 +69,9 @@ export function useAllPageAccess(userRole: string | null) {
 
       return (data as PageAccessControl[]) ?? [];
     },
-    enabled: !!userRole,
+    enabled: !!userRole && (userRole === "admin" || userRole === "master" || userRole === "reseller"),
     staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: false,
   });
 }
 

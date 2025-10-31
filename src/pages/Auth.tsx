@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const signInSchema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -28,6 +29,23 @@ export default function Auth() {
       navigate("/");
     }
   }, [user, navigate]);
+
+  // Clear any invalid tokens on mount
+  useEffect(() => {
+    const clearInvalidAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.log("Clearing invalid session");
+          await supabase.auth.signOut();
+        }
+      } catch (error) {
+        console.log("Clearing auth on error");
+        await supabase.auth.signOut();
+      }
+    };
+    clearInvalidAuth();
+  }, []);
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
