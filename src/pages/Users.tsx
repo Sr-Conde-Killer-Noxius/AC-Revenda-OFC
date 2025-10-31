@@ -454,7 +454,7 @@ export default function Users() {
       }
       
       toast({
-        title: "Erro ao Criar Usuários Usuários",
+        title: "Erro ao Criar Usuário Teste",
         description: errorMessage,
         variant: "destructive",
       });
@@ -1275,7 +1275,7 @@ export default function Users() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                {submitting ? "Criando..." : "Criar Usuários Usuários"}
+                {submitting ? "Criando..." : "Criar Usuário Teste"}
               </Button>
             </DialogFooter>
           </form>
@@ -1286,9 +1286,9 @@ export default function Users() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto"> {/* Adicionado max-h e overflow-y-auto */}
           <DialogHeader>
-            <DialogTitle>Novo Revendedor</DialogTitle>
+            <DialogTitle>Novo Usuário</DialogTitle>
             <DialogDescription>
-              Crie um novo usuário revendedor no sistema
+              Crie um novo usuário no sistema
             </DialogDescription>
           </DialogHeader>
 
@@ -1377,7 +1377,7 @@ export default function Users() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                {submitting ? "Criando..." : "Criar Usuários"}
+                {submitting ? "Criando..." : "Criar Usuário"}
               </Button>
             </DialogFooter>
           </form>
