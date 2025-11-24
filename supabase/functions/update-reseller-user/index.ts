@@ -177,9 +177,14 @@ serve(async (req) => {
         console.log(`Status changed for user ${userId} from ${currentStatus} to ${status}. Sending webhook...`);
         
         const acertoCertoApiKey = Deno.env.get('ACERTO_CERTO_API_KEY');
+        
+        console.log('🔑 ACERTO_CERTO_API_KEY presente?', !!acertoCertoApiKey);
+        console.log('🔑 Primeiros 10 caracteres:', acertoCertoApiKey?.substring(0, 10));
+        
         if (!acertoCertoApiKey) {
-          console.warn('⚠️ ACERTO_CERTO_API_KEY não configurado. Webhook pode falhar com 401.');
-        }
+          console.error('❌ CRITICAL: ACERTO_CERTO_API_KEY não configurado! Pulando envio de webhook.');
+          // Continue without sending webhook
+        } else {
 
         let targetWebhookUrl = 'not_configured';
         const webhookPayload = {
@@ -190,11 +195,11 @@ serve(async (req) => {
 
         const requestHeaders = {
           'Content-Type': 'application/json',
-          ...(acertoCertoApiKey && {
-            'Authorization': `Bearer ${acertoCertoApiKey}`,
-            'apikey': acertoCertoApiKey
-          })
+          'Authorization': `Bearer ${acertoCertoApiKey}`,
+          'apikey': acertoCertoApiKey
         };
+        
+        console.log('📤 Headers preparados:', JSON.stringify(requestHeaders, null, 2));
 
         let webhookStatusCode = 200;
         let webhookResponseBody = 'Webhook URL not configured, no external call made.';
@@ -227,24 +232,31 @@ serve(async (req) => {
         } finally {
           // Sempre logar no histórico, independentemente do sucesso ou falha do fetch
           try {
-            const { error: logInsertError } = await supabaseAdmin.from('acerto_certo_webhook_history').insert({
-              event_type: 'update_user_status',
-              target_url: targetWebhookUrl,
-              payload: webhookPayload,
-              request_headers: requestHeaders,
-              response_status_code: webhookStatusCode,
-              response_body: webhookResponseBody,
-              revenda_user_id: userId
-            });
+            console.log('💾 Salvando no histórico...');
+            const { data: insertedData, error: logInsertError } = await supabaseAdmin
+              .from('acerto_certo_webhook_history')
+              .insert({
+                event_type: 'update_user_status',
+                target_url: targetWebhookUrl,
+                payload: webhookPayload,
+                request_headers: requestHeaders,
+                response_status_code: webhookStatusCode,
+                response_body: webhookResponseBody,
+                revenda_user_id: userId
+              })
+              .select();
+              
             if (logInsertError) {
-              console.error(`Failed to insert webhook history for update_user_status:`, logInsertError);
+              console.error('❌ Failed to insert webhook history for update_user_status:', logInsertError);
               throw new Error(`Failed to log webhook history: ${logInsertError.message}`);
             }
+            console.log('✅ Histórico salvo com sucesso:', insertedData);
           } catch (logError) {
-            console.error('Critical: Failed to log webhook error during initial webhook processing error:', logError);
+            console.error('❌ Critical: Failed to log webhook error during initial webhook processing error:', logError);
             throw logError;
           }
         }
+        } // Fechar o else correspondente
       }
 
       // If creditExpiryDate was updated, trigger check-expired-credits function

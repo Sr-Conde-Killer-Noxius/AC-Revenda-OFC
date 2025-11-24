@@ -222,22 +222,27 @@ serve(async (req) => {
       console.log('Test reseller creation - skipping credit deduction');
     }
 
-    // Enviar webhook para Acerto Certo (não bloqueia a resposta de sucesso)
-    (async () => {
-      try {
-        const acertoCertoApiKey = Deno.env.get('ACERTO_CERTO_API_KEY');
-        if (!acertoCertoApiKey) {
-          console.warn('⚠️ ACERTO_CERTO_API_KEY não configurado. Webhook pode falhar com 401.');
-        }
+      // Enviar webhook para Acerto Certo (não bloqueia a resposta de sucesso)
+      (async () => {
+        try {
+          const acertoCertoApiKey = Deno.env.get('ACERTO_CERTO_API_KEY');
+          
+          console.log('🔑 ACERTO_CERTO_API_KEY presente?', !!acertoCertoApiKey);
+          console.log('🔑 Primeiros 10 caracteres:', acertoCertoApiKey?.substring(0, 10));
+          
+          if (!acertoCertoApiKey) {
+            console.error('❌ CRITICAL: ACERTO_CERTO_API_KEY não configurado! Pulando envio de webhook.');
+            return;
+          }
 
-        const { data: config } = await supabaseAdmin
-          .from('webhook_configs')
-          .select('webhook_url')
-          .eq('config_key', 'acerto_certo_webhook_url')
-          .maybeSingle();
+          const { data: config } = await supabaseAdmin
+            .from('webhook_configs')
+            .select('webhook_url')
+            .eq('config_key', 'acerto_certo_webhook_url')
+            .maybeSingle();
 
-        if (config?.webhook_url) {
-          console.log('Sending create_user webhook to Acerto Certo:', config.webhook_url);
+          if (config?.webhook_url) {
+            console.log('Sending create_user webhook to Acerto Certo:', config.webhook_url);
           
           // Buscar dados adicionais do perfil criado
           const { data: profile } = await supabaseAdmin
@@ -269,11 +274,11 @@ serve(async (req) => {
 
           const requestHeaders = {
             'Content-Type': 'application/json',
-            ...(acertoCertoApiKey && {
-              'Authorization': `Bearer ${acertoCertoApiKey}`,
-              'apikey': acertoCertoApiKey
-            })
+            'Authorization': `Bearer ${acertoCertoApiKey}`,
+            'apikey': acertoCertoApiKey
           };
+          
+          console.log('📤 Headers preparados:', JSON.stringify(requestHeaders, null, 2));
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
@@ -293,7 +298,8 @@ serve(async (req) => {
           console.log('Webhook response:', { statusCode, responseBody });
 
           // Registrar histórico do webhook
-          await supabaseAdmin
+          console.log('💾 Salvando no histórico...');
+          const { data: insertedData, error: logError } = await supabaseAdmin
             .from('acerto_certo_webhook_history')
             .insert({
               event_type: 'create_user',
@@ -303,9 +309,14 @@ serve(async (req) => {
               response_status_code: statusCode,
               response_body: responseBody,
               revenda_user_id: newUser.user!.id
-            });
-
-          console.log('Webhook history logged successfully');
+            })
+            .select();
+            
+          if (logError) {
+            console.error('❌ Erro ao salvar histórico:', logError);
+          } else {
+            console.log('✅ Histórico salvo com sucesso:', insertedData);
+          }
         } else {
           console.log('No Acerto Certo webhook URL configured, skipping webhook');
         }

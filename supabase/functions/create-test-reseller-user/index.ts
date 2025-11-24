@@ -167,8 +167,13 @@ serve(async (req) => {
     (async () => {
       try {
         const acertoCertoApiKey = Deno.env.get('ACERTO_CERTO_API_KEY');
+        
+        console.log('🔑 ACERTO_CERTO_API_KEY presente?', !!acertoCertoApiKey);
+        console.log('🔑 Primeiros 10 caracteres:', acertoCertoApiKey?.substring(0, 10));
+        
         if (!acertoCertoApiKey) {
-          console.warn('⚠️ ACERTO_CERTO_API_KEY não configurado. Webhook pode falhar com 401.');
+          console.error('❌ CRITICAL: ACERTO_CERTO_API_KEY não configurado!');
+          return;
         }
 
         const { data: config } = await supabaseAdmin
@@ -205,12 +210,11 @@ serve(async (req) => {
 
           const requestHeaders = {
             'Content-Type': 'application/json',
-            ...(acertoCertoApiKey && {
-              'Authorization': `Bearer ${acertoCertoApiKey}`,
-              'apikey': acertoCertoApiKey
-            })
+            'Authorization': `Bearer ${acertoCertoApiKey}`,
+            'apikey': acertoCertoApiKey
           };
 
+          console.log('📤 Headers preparados:', JSON.stringify(requestHeaders, null, 2));
           console.log('Webhook payload with vencimento (TODAY):', todayFormatted);
 
           const controller = new AbortController();
@@ -231,7 +235,8 @@ serve(async (req) => {
           console.log('Webhook response:', { statusCode, responseBody });
 
           // Registrar histórico do webhook
-          await supabaseAdmin
+          console.log('💾 Salvando no histórico...');
+          const { data: insertedData, error: logError } = await supabaseAdmin
             .from('acerto_certo_webhook_history')
             .insert({
               event_type: 'create_user',
@@ -241,9 +246,14 @@ serve(async (req) => {
               response_status_code: statusCode,
               response_body: responseBody,
               revenda_user_id: newUser.user!.id
-            });
-
-          console.log('Webhook history logged successfully');
+            })
+            .select();
+            
+          if (logError) {
+            console.error('❌ Erro ao salvar histórico:', logError);
+          } else {
+            console.log('✅ Histórico salvo com sucesso:', insertedData);
+          }
         } else {
           console.log('No Acerto Certo webhook URL configured, skipping webhook');
         }
