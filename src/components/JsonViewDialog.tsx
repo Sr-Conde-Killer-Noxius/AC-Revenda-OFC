@@ -31,7 +31,7 @@ export function JsonViewDialog({ data, triggerLabel = "Ver payload", title = "Pa
         </DialogHeader>
         <div className="space-y-3">
           <div className="rounded-md border bg-background p-3">
-            <pre className="max-h-96 overflow-auto text-xs leading-relaxed whitespace-pre-wrap break-all font-mono">
+            <pre className="overflow-auto text-xs leading-relaxed whitespace-pre-wrap break-all font-mono">
 {json}
             </pre>
           </div>

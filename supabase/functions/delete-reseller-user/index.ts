@@ -90,8 +90,13 @@ serve(async (req) => {
 
     // 1. Preparar payload do webhook e variáveis de log de histórico
     const acertoCertoApiKey = Deno.env.get('ACERTO_CERTO_API_KEY');
+    
+    console.log('🔑 ACERTO_CERTO_API_KEY presente?', !!acertoCertoApiKey);
+    console.log('🔑 Primeiros 10 caracteres:', acertoCertoApiKey?.substring(0, 10));
+    
     if (!acertoCertoApiKey) {
-      console.warn('⚠️ ACERTO_CERTO_API_KEY não configurado. Webhook pode falhar com 401.');
+      console.error('❌ CRITICAL: ACERTO_CERTO_API_KEY não configurado!');
+      throw new Error('ACERTO_CERTO_API_KEY is required');
     }
 
     let targetWebhookUrl = 'not_configured';
@@ -102,11 +107,11 @@ serve(async (req) => {
     
     const requestHeaders = {
       'Content-Type': 'application/json',
-      ...(acertoCertoApiKey && {
-        'Authorization': `Bearer ${acertoCertoApiKey}`,
-        'apikey': acertoCertoApiKey
-      })
+      'Authorization': `Bearer ${acertoCertoApiKey}`,
+      'apikey': acertoCertoApiKey
     };
+    
+    console.log('📤 Headers preparados:', JSON.stringify(requestHeaders, null, 2));
 
     let statusCode = 200;
     let responseBody = 'Webhook URL not configured, no external call made.';
@@ -145,7 +150,17 @@ serve(async (req) => {
       // 3. SEMPRE logar no histórico, independentemente do sucesso ou falha do fetch
       // ISSO DEVE ACONTECER ANTES DA EXCLUSÃO DO USUÁRIO para evitar a violação de FK
       try {
-        const { error: logInsertError } = await supabaseAdmin
+        console.log('💾 Salvando no histórico:', {
+          event_type: 'delete_user',
+          target_url: targetWebhookUrl,
+          payload: payload,
+          request_headers: requestHeaders,
+          response_status_code: statusCode,
+          response_body: responseBody?.substring(0, 100),
+          revenda_user_id: userId
+        });
+        
+        const { data: insertedData, error: logInsertError } = await supabaseAdmin
           .from('acerto_certo_webhook_history')
           .insert({
             event_type: 'delete_user',
@@ -155,17 +170,16 @@ serve(async (req) => {
             response_status_code: statusCode,
             response_body: responseBody,
             revenda_user_id: userId // userId ainda existe em profiles neste ponto
-          });
+          })
+          .select();
         
         if (logInsertError) {
-          console.error('Failed to log webhook history:', logInsertError);
-          // Re-throw o erro para garantir que o bloco catch principal seja acionado
+          console.error('❌ Failed to log webhook history:', logInsertError);
           throw new Error(`Failed to log webhook history: ${logInsertError.message}`);
         }
-        console.log('Webhook history logged successfully');
+        console.log('✅ Webhook history logged successfully:', insertedData);
       } catch (logError) {
-        console.error('Critical: Failed to log webhook history even after initial attempt:', logError);
-        // Re-throw este erro crítico também
+        console.error('❌ Critical: Failed to log webhook history even after initial attempt:', logError);
         throw logError;
       }
     }
