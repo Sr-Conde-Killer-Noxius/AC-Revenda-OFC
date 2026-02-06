@@ -57,8 +57,9 @@ serve(async (req) => {
       .eq('user_id', requestingUser.id)
       .maybeSingle();
 
-    if (requestingRoleData?.role !== 'master') {
-      throw new Error('Only master users can transfer credits');
+    const requestingRole = requestingRoleData?.role;
+    if (requestingRole !== 'master' && requestingRole !== 'reseller') {
+      throw new Error('Only master or reseller users can transfer credits');
     }
 
     const { targetUserId, amount } = await req.json();
@@ -67,7 +68,7 @@ serve(async (req) => {
       throw new Error('Missing or invalid required fields: targetUserId and a positive amount are required.');
     }
 
-    // 1. Check if requesting master has enough credits
+    // 1. Check if requesting user has enough credits
     const { data: initiatorCredits, error: initiatorCreditsError } = await supabaseAdmin
       .from('user_credits')
       .select('balance')
@@ -81,7 +82,7 @@ serve(async (req) => {
       throw new Error(`Créditos insuficientes. Saldo atual: ${currentInitiatorBalance}`);
     }
 
-    // 2. Verify target user is a master created by the requesting master
+    // 2. Verify target user is a master or reseller created by the requesting user
     const { data: targetProfile, error: targetProfileError } = await supabaseAdmin
       .from('profiles')
       .select('full_name, created_by')
@@ -93,7 +94,7 @@ serve(async (req) => {
       throw new Error('Target user not found.');
     }
     if (targetProfile.created_by !== requestingUser.id) {
-      throw new Error('You can only transfer credits to masters you created.');
+      throw new Error('Você só pode transferir créditos para usuários que você criou.');
     }
 
     const { data: targetRoleData, error: targetRoleError } = await supabaseAdmin
@@ -103,8 +104,9 @@ serve(async (req) => {
       .maybeSingle();
 
     if (targetRoleError) throw targetRoleError;
-    if (targetRoleData?.role !== 'master') {
-      throw new Error('You can only transfer credits to other master users.');
+    const targetRole = targetRoleData?.role;
+    if (targetRole !== 'master' && targetRole !== 'reseller') {
+      throw new Error('Você só pode transferir créditos para usuários master ou revenda.');
     }
 
     // 3. Deduct from initiator's balance
@@ -141,6 +143,17 @@ serve(async (req) => {
 
     if (updateTargetError) throw updateTargetError;
 
+    // Get requesting user's profile for the description
+    const { data: requestingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', requestingUser.id)
+      .maybeSingle();
+
+    const requestingUserName = requestingProfile?.full_name || requestingUser.id;
+    const targetRoleLabel = targetRole === 'master' ? 'Master' : 'Revenda';
+    const requestingRoleLabel = requestingRole === 'master' ? 'Master' : 'Revenda';
+
     // 5. Record two transactions
     const transactionsToInsert = [
       {
@@ -148,7 +161,7 @@ serve(async (req) => {
         transaction_type: 'credit_spent',
         amount: -amount,
         balance_after: newInitiatorBalance,
-        description: `Transferência para Master ${targetProfile.full_name || targetUserId}`,
+        description: `Transferência para ${targetRoleLabel} ${targetProfile.full_name || targetUserId}`,
         related_user_id: targetUserId,
         performed_by: requestingUser.id
       },
@@ -157,7 +170,7 @@ serve(async (req) => {
         transaction_type: 'credit_added',
         amount: amount,
         balance_after: newTargetBalance,
-        description: `Recebido de Master ${requestingUser.id}`, // Can't get requesting user's full_name easily here without another query
+        description: `Recebido de ${requestingRoleLabel} ${requestingUserName}`,
         related_user_id: requestingUser.id,
         performed_by: requestingUser.id
       }

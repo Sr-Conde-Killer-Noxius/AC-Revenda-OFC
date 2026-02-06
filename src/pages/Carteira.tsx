@@ -72,7 +72,7 @@ export default function Carteira() {
   const [loadingMasterUsers, setLoadingMasterUsers] = useState(true);
 
   const loadCreditBalance = async () => {
-    if (!user || userRole === 'reseller') return;
+    if (!user) return;
 
     try {
       if (userRole === 'admin') {
@@ -80,6 +80,7 @@ export default function Carteira() {
         return;
       }
 
+      // Both master and reseller can see their credits
       const { data, error } = await supabase
         .from('user_credits')
         .select('balance')
@@ -192,7 +193,7 @@ export default function Carteira() {
 
       if (profilesError) throw profilesError;
 
-      const mastersWithRoles: MasterUser[] = [];
+      const usersWithRoles: MasterUser[] = [];
       
       for (const profile of profiles || []) {
         const { data: roleData } = await supabase
@@ -201,22 +202,24 @@ export default function Carteira() {
           .eq('user_id', profile.user_id)
           .maybeSingle();
         
-        if (roleData?.role === 'master') {
-          mastersWithRoles.push({
+        // Include both master and reseller users
+        if (roleData?.role === 'master' || roleData?.role === 'reseller') {
+          usersWithRoles.push({
             user_id: profile.user_id,
             full_name: profile.full_name || "N/A",
           });
         }
       }
 
-      setMasterUsers(mastersWithRoles);
+      setMasterUsers(usersWithRoles);
     } catch (error: any) {
-      console.error('Error loading master users:', error);
+      console.error('Error loading master/reseller users:', error);
     }
   };
 
   const loadMasterCreatedUsers = async () => {
-    if (userRole !== 'master' || !user) return;
+    // Both master and reseller can transfer credits to users they created
+    if ((userRole !== 'master' && userRole !== 'reseller') || !user) return;
 
     try {
       const { data: profiles, error: profilesError } = await supabase
@@ -227,7 +230,7 @@ export default function Carteira() {
 
       if (profilesError) throw profilesError;
 
-      const createdMasters: MasterUser[] = [];
+      const createdUsers: MasterUser[] = [];
       for (const profile of profiles || []) {
         const { data: roleData } = await supabase
           .from('user_roles')
@@ -235,16 +238,17 @@ export default function Carteira() {
           .eq('user_id', profile.user_id)
           .maybeSingle();
         
-        if (roleData?.role === 'master') {
-          createdMasters.push({
+        // Include master and reseller users (those who can receive credits)
+        if (roleData?.role === 'master' || roleData?.role === 'reseller') {
+          createdUsers.push({
             user_id: profile.user_id,
             full_name: profile.full_name || "N/A",
           });
         }
       }
-      setMasterCreatedUsers(createdMasters);
+      setMasterCreatedUsers(createdUsers);
     } catch (error: any) {
-      console.error('Error loading master created users:', error);
+      console.error('Error loading created users:', error);
     }
   };
 
@@ -294,7 +298,7 @@ export default function Carteira() {
     if (userRole === 'admin') {
       loadMasterUsers(); // Keep this for the add/remove dialogs
       loadMasterUsersWithDetails(); // New call for the new section
-    } else if (userRole === 'master') {
+    } else if (userRole === 'master' || userRole === 'reseller') {
       loadMasterCreatedUsers();
     }
   }, [userRole, user]);
@@ -498,14 +502,14 @@ export default function Carteira() {
                 {userRole === 'admin' ? 'Ilimitado' : 'créditos'}
               </span>
             </div>
-            {(userRole === 'admin' || userRole === 'master') && (
+            {(userRole === 'admin' || userRole === 'master' || userRole === 'reseller') && (
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
                 <Button 
                   onClick={() => setAddCreditsDialogOpen(true)}
                   className="w-full sm:w-auto"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Créditos a Master
+                  Adicionar Créditos
                 </Button>
                 {userRole === 'admin' && (
                   <Button 
@@ -514,7 +518,7 @@ export default function Carteira() {
                     className="w-full sm:w-auto"
                   >
                     <Coins className="mr-2 h-4 w-4" />
-                    Remover Créditos de Master
+                    Remover Créditos
                   </Button>
                 )}
               </div>
@@ -735,8 +739,8 @@ export default function Carteira() {
           </Card>
         )}
 
-        {/* Créditos Adquiridos (only for Masters) */}
-        {userRole === 'master' && (
+        {/* Créditos Adquiridos (for Masters and Resellers) */}
+        {(userRole === 'master' || userRole === 'reseller') && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -744,7 +748,7 @@ export default function Carteira() {
                 Créditos Adquiridos (Seu Saldo)
               </CardTitle>
               <CardDescription>
-                Histórico de créditos adicionados ao seu saldo por administradores ou transferidos por você
+                Histórico de créditos adicionados ao seu saldo por administradores ou transferidos para você
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -780,9 +784,7 @@ export default function Carteira() {
                             {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
-                            {transaction.transaction_type === 'credit_added' && transaction.user_id === user?.id && transaction.description.startsWith('Recebido de Master')
-                              ? 'Recebido do seu Master'
-                              : transaction.description}
+                            {transaction.description}
                           </TableCell>
                           <TableCell className="text-right whitespace-nowrap">
                             <Badge 
@@ -880,25 +882,25 @@ export default function Carteira() {
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {userRole === 'admin' ? 'Adicionar Créditos' : 'Transferir Créditos para Usuário Master'}
+              {userRole === 'admin' ? 'Adicionar Créditos' : 'Transferir Créditos'}
             </DialogTitle>
             <DialogDescription>
               {userRole === 'admin'
-                ? 'Adicione créditos a um usuário master específico'
-                : 'Transfira créditos do seu saldo para um usuário master que você criou'}
+                ? 'Adicione créditos a um usuário master ou revenda'
+                : 'Transfira créditos do seu saldo para um usuário que você criou'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="master">Usuário Master</Label>
+              <Label htmlFor="master">Usuário</Label>
               <Select 
                 value={selectedMasterId} 
                 onValueChange={setSelectedMasterId}
                 disabled={submitting}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione um master" />
+                  <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
                 <SelectContent>
                   {userRole === 'admin' ? 
@@ -908,9 +910,9 @@ export default function Carteira() {
                       </SelectItem>
                     ))
                    : 
-                    masterCreatedUsers.map((master) => (
-                      <SelectItem key={master.user_id} value={master.user_id}>
-                        {master.full_name}
+                    masterCreatedUsers.map((createdUser) => (
+                      <SelectItem key={createdUser.user_id} value={createdUser.user_id}>
+                        {createdUser.full_name}
                       </SelectItem>
                     ))
                   }
