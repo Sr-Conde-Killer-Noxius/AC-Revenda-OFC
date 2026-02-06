@@ -188,8 +188,17 @@ serve(async (req) => {
 
     console.log('Role assigned successfully');
 
-    // Check and deduct credit for master/reseller users (skip for test users and admins)
-    if ((requestingRole === 'master' || requestingRole === 'reseller') && !isTestReseller) {
+    // Check and deduct credit for creating users (skip for test users and admins)
+    // Logic:
+    // - Master creating master/reseller: FREE
+    // - Master creating cliente: costs 1 credit
+    // - Reseller creating cliente: costs 1 credit
+    const shouldDeductCredit = !isTestReseller && (
+      (requestingRole === 'master' && resellerRole === 'cliente') ||
+      (requestingRole === 'reseller' && resellerRole === 'cliente')
+    );
+
+    if (shouldDeductCredit) {
       const { data: creditData, error: creditError } = await supabaseAdmin
         .from('user_credits')
         .select('balance')
@@ -225,12 +234,14 @@ serve(async (req) => {
           transaction_type: 'credit_spent',
           amount: -1,
           balance_after: newBalance,
-          description: `Criação do usuário ${fullName}`,
+          description: `Criação do cliente ${fullName}`,
           related_user_id: newUser.user!.id,
           performed_by: requestingUser.id
         });
 
-      console.log('Credit deducted successfully');
+      console.log('Credit deducted successfully for cliente creation');
+    } else if (requestingRole === 'master' && (resellerRole === 'master' || resellerRole === 'reseller')) {
+      console.log(`Master creating ${resellerRole} - no credit deduction`);
     } else if (isTestReseller) {
       console.log('Test user creation - skipping credit deduction');
     }
