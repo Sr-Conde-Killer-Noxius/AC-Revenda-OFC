@@ -380,8 +380,7 @@ export default function Carteira() {
             }
           }
         ));
-      } else if (userRole === 'master') {
-        // Client-side check for master's own balance before invoking Edge Function
+      } else if (userRole === 'master' || userRole === 'reseller') {
         if (creditBalance === null || creditBalance < parseInt(creditAmount)) {
           toast({
             title: "Créditos insuficientes",
@@ -424,9 +423,7 @@ export default function Carteira() {
       setCreditAmount("");
       loadCreditBalance();
       loadTransactions();
-      if (userRole === 'admin') {
-        loadMasterUsersWithDetails(); // Refresh master user details
-      }
+      loadMasterUsersWithDetails();
     } catch (error: any) {
       console.error("Error adding credits:", error);
       toast({
@@ -504,9 +501,7 @@ export default function Carteira() {
       setRemoveCreditAmount("");
       loadCreditBalance();
       loadTransactions();
-      if (userRole === 'admin') {
-        loadMasterUsersWithDetails(); // Refresh master user details
-      }
+      loadMasterUsersWithDetails();
     } catch (error: any) {
       console.error("Error adding credits:", error);
       toast({
