@@ -64,11 +64,14 @@ serve(async (req) => {
 
     const { targetUserId, amount } = await req.json();
 
-    if (!targetUserId || !amount || amount <= 0) {
-      throw new Error('Missing or invalid required fields: targetUserId and a positive amount are required.');
+    if (!targetUserId || !amount || amount === 0) {
+      throw new Error('Missing or invalid required fields: targetUserId and a non-zero amount are required.');
     }
 
-    // 1. Check if requesting user has enough credits
+    const isRemoval = amount < 0;
+    const absAmount = Math.abs(amount);
+
+    // 1. Check credits
     const { data: initiatorCredits, error: initiatorCreditsError } = await supabaseAdmin
       .from('user_credits')
       .select('balance')
@@ -76,41 +79,44 @@ serve(async (req) => {
       .maybeSingle();
 
     if (initiatorCreditsError) throw initiatorCreditsError;
-
     const currentInitiatorBalance = initiatorCredits?.balance || 0;
-    if (currentInitiatorBalance < amount) {
-      throw new Error(`Créditos insuficientes. Saldo atual: ${currentInitiatorBalance}`);
-    }
 
-    // 2. Verify target user is a master or reseller created by the requesting user
-    const { data: targetProfile, error: targetProfileError } = await supabaseAdmin
-      .from('profiles')
-      .select('full_name, created_by')
+    const { data: targetCredits, error: targetCreditsError } = await supabaseAdmin
+      .from('user_credits')
+      .select('balance')
       .eq('user_id', targetUserId)
       .maybeSingle();
 
-    if (targetProfileError) throw targetProfileError;
-    if (!targetProfile) {
-      throw new Error('Target user not found.');
-    }
-    if (targetProfile.created_by !== requestingUser.id) {
-      throw new Error('Você só pode transferir créditos para usuários que você criou.');
-    }
+    if (targetCreditsError && targetCreditsError.code !== 'PGRST116') throw targetCreditsError;
+    const currentTargetBalance = targetCredits?.balance || 0;
 
-    const { data: targetRoleData, error: targetRoleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', targetUserId)
-      .maybeSingle();
-
-    if (targetRoleError) throw targetRoleError;
-    const targetRole = targetRoleData?.role;
-    if (targetRole !== 'master' && targetRole !== 'reseller') {
-      throw new Error('Você só pode transferir créditos para usuários master ou revenda.');
+    if (isRemoval) {
+      // Removing credits from target → credits return to initiator
+      if (currentTargetBalance < absAmount) {
+        throw new Error(`O usuário alvo tem apenas ${currentTargetBalance} créditos. Não é possível remover ${absAmount}.`);
+      }
+    } else {
+      // Adding credits to target → deduct from initiator
+      if (currentInitiatorBalance < absAmount) {
+        throw new Error(`Créditos insuficientes. Saldo atual: ${currentInitiatorBalance}`);
+      }
     }
 
-    // 3. Deduct from initiator's balance
-    const newInitiatorBalance = currentInitiatorBalance - amount;
+    // 2. Calculate new balances
+    let newInitiatorBalance: number;
+    let newTargetBalance: number;
+
+    if (isRemoval) {
+      // Remove from target, return to initiator
+      newTargetBalance = currentTargetBalance - absAmount;
+      newInitiatorBalance = currentInitiatorBalance + absAmount;
+    } else {
+      // Add to target, deduct from initiator
+      newInitiatorBalance = currentInitiatorBalance - absAmount;
+      newTargetBalance = currentTargetBalance + absAmount;
+    }
+
+    // 3. Update balances
     const { error: updateInitiatorError } = await supabaseAdmin
       .from('user_credits')
       .upsert({
@@ -120,18 +126,6 @@ serve(async (req) => {
       }, { onConflict: 'user_id' });
 
     if (updateInitiatorError) throw updateInitiatorError;
-
-    // 4. Add to target's balance
-    const { data: targetCredits, error: targetCreditsError } = await supabaseAdmin
-      .from('user_credits')
-      .select('balance')
-      .eq('user_id', targetUserId)
-      .maybeSingle();
-
-    if (targetCreditsError && targetCreditsError.code !== 'PGRST116') throw targetCreditsError;
-
-    const currentTargetBalance = targetCredits?.balance || 0;
-    const newTargetBalance = currentTargetBalance + amount;
 
     const { error: updateTargetError } = await supabaseAdmin
       .from('user_credits')
@@ -154,27 +148,52 @@ serve(async (req) => {
     const targetRoleLabel = targetRole === 'master' ? 'Master' : 'Revenda';
     const requestingRoleLabel = requestingRole === 'master' ? 'Master' : 'Revenda';
 
-    // 5. Record two transactions
-    const transactionsToInsert = [
-      {
-        user_id: requestingUser.id,
-        transaction_type: 'credit_spent',
-        amount: -amount,
-        balance_after: newInitiatorBalance,
-        description: `Transferência para ${targetRoleLabel} ${targetProfile.full_name || targetUserId}`,
-        related_user_id: targetUserId,
-        performed_by: requestingUser.id
-      },
-      {
-        user_id: targetUserId,
-        transaction_type: 'credit_added',
-        amount: amount,
-        balance_after: newTargetBalance,
-        description: `Recebido de ${requestingRoleLabel} ${requestingUserName}`,
-        related_user_id: requestingUser.id,
-        performed_by: requestingUser.id
-      }
-    ];
+    // 4. Record transactions
+    let transactionsToInsert;
+
+    if (isRemoval) {
+      transactionsToInsert = [
+        {
+          user_id: targetUserId,
+          transaction_type: 'credit_spent',
+          amount: -absAmount,
+          balance_after: newTargetBalance,
+          description: `Créditos removidos por ${requestingRoleLabel} ${requestingUserName}`,
+          related_user_id: requestingUser.id,
+          performed_by: requestingUser.id
+        },
+        {
+          user_id: requestingUser.id,
+          transaction_type: 'credit_added',
+          amount: absAmount,
+          balance_after: newInitiatorBalance,
+          description: `Créditos devolvidos de ${targetRoleLabel} ${targetProfile.full_name || targetUserId}`,
+          related_user_id: targetUserId,
+          performed_by: requestingUser.id
+        }
+      ];
+    } else {
+      transactionsToInsert = [
+        {
+          user_id: requestingUser.id,
+          transaction_type: 'credit_spent',
+          amount: -absAmount,
+          balance_after: newInitiatorBalance,
+          description: `Transferência para ${targetRoleLabel} ${targetProfile.full_name || targetUserId}`,
+          related_user_id: targetUserId,
+          performed_by: requestingUser.id
+        },
+        {
+          user_id: targetUserId,
+          transaction_type: 'credit_added',
+          amount: absAmount,
+          balance_after: newTargetBalance,
+          description: `Recebido de ${requestingRoleLabel} ${requestingUserName}`,
+          related_user_id: requestingUser.id,
+          performed_by: requestingUser.id
+        }
+      ];
+    }
 
     const { error: transactionError } = await supabaseAdmin
       .from('credit_transactions')
@@ -182,14 +201,16 @@ serve(async (req) => {
 
     if (transactionError) throw transactionError;
 
-    console.log(`Credits transferred successfully from ${requestingUser.id} to ${targetUserId}`);
+    const action = isRemoval ? 'removidos de' : 'transferidos para';
+    console.log(`Credits ${action} ${targetUserId} by ${requestingUser.id}. Amount: ${absAmount}`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Transferência de ${amount} créditos para ${targetProfile.full_name || targetUserId} realizada com sucesso.`,
+        message: `${absAmount} crédito(s) ${action} ${targetProfile.full_name || targetUserId} com sucesso.`,
         newInitiatorBalance,
-        newTargetBalance
+        newTargetBalance,
+        targetUser: targetProfile.full_name || targetUserId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
