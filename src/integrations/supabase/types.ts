@@ -148,6 +148,84 @@ export type Database = {
         }
         Relationships: []
       }
+      mercado_pago_configs: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          is_active: boolean
+          public_key: string
+          unit_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          public_key: string
+          unit_price?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          public_key?: string
+          unit_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mercado_pago_payments: {
+        Row: {
+          amount_credits: number
+          copy_paste: string | null
+          created_at: string
+          external_id: string | null
+          id: string
+          payer_id: string
+          qr_code: string | null
+          qr_code_base64: string | null
+          receiver_id: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          amount_credits: number
+          copy_paste?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          payer_id: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          receiver_id: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          amount_credits?: number
+          copy_paste?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          payer_id?: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          receiver_id?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       n8n_message_sender_history: {
         Row: {
           created_at: string

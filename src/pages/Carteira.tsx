@@ -11,8 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Coins, Plus, TrendingDown, TrendingUp, Repeat2, UserCog, Loader2, Search, ArrowUpDown, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Coins, Plus, TrendingDown, TrendingUp, Repeat2, UserCog, Loader2, Search, ArrowUpDown, Filter, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
+import { BuyCreditsDialog } from "@/components/BuyCreditsDialog";
 
 interface CreditData {
   balance: number;
@@ -89,6 +90,10 @@ export default function Carteira() {
   const [creditedPage, setCreditedPage] = useState(1);
   const [spentPage, setSpentPage] = useState(1);
   const pageSize = 15;
+
+  // Buy credits (Mercado Pago)
+  const [buyCreditsOpen, setBuyCreditsOpen] = useState(false);
+  const [superiorMpConfig, setSuperiorMpConfig] = useState<{ unit_price: number; is_active: boolean } | null>(null);
 
   const loadCreditBalance = async () => {
     if (!user) return;
@@ -294,9 +299,36 @@ export default function Carteira() {
     }
   };
 
+  // Check if superior has MP configured
+  const loadSuperiorMpConfig = async () => {
+    if (!user || userRole === 'admin') return;
+    try {
+      // Get created_by from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('created_by')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!profile?.created_by) return;
+
+      const { data: mpConfig } = await supabase
+        .from('mercado_pago_configs')
+        .select('unit_price, is_active')
+        .eq('user_id', profile.created_by)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      setSuperiorMpConfig(mpConfig);
+    } catch (error) {
+      console.error('Error checking superior MP config:', error);
+    }
+  };
+
   useEffect(() => {
     loadCreditBalance();
     loadTransactions();
+    loadSuperiorMpConfig();
     if (userRole === 'admin') {
       loadMasterUsers();
     } else if (userRole === 'master' || userRole === 'reseller') {
@@ -634,6 +666,16 @@ export default function Carteira() {
                   <Coins className="mr-2 h-4 w-4" />
                   Remover Créditos
                 </Button>
+                {superiorMpConfig && (
+                  <Button 
+                    onClick={() => setBuyCreditsOpen(true)}
+                    variant="outline"
+                    className="w-full sm:w-auto border-primary/50 text-primary hover:bg-primary/10"
+                  >
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Comprar Créditos
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
@@ -1210,6 +1252,19 @@ export default function Carteira() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Buy Credits Dialog */}
+      {superiorMpConfig && (
+        <BuyCreditsDialog
+          open={buyCreditsOpen}
+          onOpenChange={setBuyCreditsOpen}
+          onSuccess={() => {
+            loadCreditBalance();
+            loadTransactions();
+          }}
+          unitPrice={Number(superiorMpConfig.unit_price)}
+        />
+      )}
     </div>
   );
 }

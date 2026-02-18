@@ -21,6 +21,7 @@ const Templates = lazy(() => import("./pages/Templates"));
 const Webhooks = lazy(() => import("./pages/Webhooks"));
 const WhatsAppConnection = lazy(() => import("./pages/WhatsAppConnection"));
 const AcertoCertoIntegration = lazy(() => import("./pages/settings/AcertoCertoIntegration"));
+const MercadoPagoIntegration = lazy(() => import("./pages/settings/MercadoPagoIntegration"));
 const ControlPages = lazy(() => import("./pages/ControlPages"));
 const Auth = lazy(() => import("./pages/Auth"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -62,6 +63,7 @@ const App = () => (
                               <Route path="/whatsapp" element={<WhatsAppConnection />} />
                               <Route path="/webhooks" element={<Webhooks />} />
                               <Route path="/settings/acerto-certo-integration" element={<AcertoCertoIntegration />} />
+                              <Route path="/settings/mercado-pago" element={<MercadoPagoIntegration />} />
                               <Route path="/profile" element={<Profile />} />
                               <Route path="/controlepages" element={<ControlPages />} />
                               <Route path="/sobre-creditos" element={<SobreCreditos />} />

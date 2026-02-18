@@ -1,1 +1,7 @@
 project_id = "korfuodesmuvloncrpmn"
+
+[functions.mp-create-payment]
+verify_jwt = false
+
+[functions.mp-webhook-handler]
+verify_jwt = false
