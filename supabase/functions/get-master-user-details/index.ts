@@ -106,10 +106,10 @@ serve(async (req) => {
     // Fetch credits
     const { data: userCredits, error: userCreditsError } = await supabaseAdmin
       .from('user_credits')
-      .select('user_id, balance')
+      .select('user_id, balance, is_unlimited')
       .in('user_id', masterResellerUserIds);
     if (userCreditsError) throw userCreditsError;
-    const creditMap = new Map(userCredits?.map(uc => [uc.user_id, uc.balance]));
+    const creditMap = new Map(userCredits?.map(uc => [uc.user_id, { balance: uc.balance, is_unlimited: uc.is_unlimited }]));
 
     // Fetch auth.users data for last_sign_in_at
     const { data: authUsersData, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
@@ -118,14 +118,18 @@ serve(async (req) => {
 
     const userDetails = (profiles || [])
       .filter(p => masterResellerUserIds.includes(p.user_id))
-      .map(p => ({
-        user_id: p.user_id,
-        full_name: p.full_name || 'N/A',
-        credit_balance: creditMap.get(p.user_id) || 0,
-        last_login_at: authUserMap.get(p.user_id) || null,
-        role: roleMap.get(p.user_id) || 'unknown',
-        created_at: p.created_at || null,
-      }));
+      .map(p => {
+        const credits = creditMap.get(p.user_id);
+        return {
+          user_id: p.user_id,
+          full_name: p.full_name || 'N/A',
+          credit_balance: credits?.balance || 0,
+          is_unlimited: credits?.is_unlimited || false,
+          last_login_at: authUserMap.get(p.user_id) || null,
+          role: roleMap.get(p.user_id) || 'unknown',
+          created_at: p.created_at || null,
+        };
+      });
 
     return new Response(
       JSON.stringify({ success: true, masters: userDetails }),

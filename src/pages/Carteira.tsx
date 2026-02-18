@@ -11,12 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Coins, Plus, TrendingDown, TrendingUp, Repeat2, UserCog, Loader2, Search, ArrowUpDown, Filter, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { Coins, Plus, TrendingDown, TrendingUp, Repeat2, UserCog, Loader2, Search, ArrowUpDown, Filter, ChevronLeft, ChevronRight, ShoppingCart, Infinity } from "lucide-react";
 import { format } from "date-fns";
 import { BuyCreditsDialog } from "@/components/BuyCreditsDialog";
 
 interface CreditData {
   balance: number;
+  is_unlimited: boolean;
 }
 
 interface Transaction {
@@ -50,6 +51,7 @@ interface MasterUserDetail {
   user_id: string;
   full_name: string;
   credit_balance: number;
+  is_unlimited: boolean;
   last_login_at: string | null;
   role: string;
   created_at: string | null;
@@ -61,6 +63,7 @@ type SortDirection = 'asc' | 'desc';
 export default function Carteira() {
   const { userRole, user } = useAuth();
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [isUnlimited, setIsUnlimited] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [addCreditsDialogOpen, setAddCreditsDialogOpen] = useState(false);
@@ -101,19 +104,25 @@ export default function Carteira() {
     try {
       if (userRole === 'admin') {
         setCreditBalance(null); // null = ilimitado
+        setIsUnlimited(true);
         return;
       }
 
       // Both master and reseller can see their credits
       const { data, error } = await supabase
         .from('user_credits')
-        .select('balance')
+        .select('balance, is_unlimited')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
 
-      setCreditBalance(data?.balance || 0);
+      setIsUnlimited(data?.is_unlimited || false);
+      if (data?.is_unlimited) {
+        setCreditBalance(null);
+      } else {
+        setCreditBalance(data?.balance || 0);
+      }
     } catch (error: any) {
       console.error('Error loading credit balance:', error);
       toast({
@@ -507,6 +516,39 @@ export default function Carteira() {
     }
   };
 
+  const handleToggleUnlimited = async (targetUserId: string, setUnlimitedValue: boolean) => {
+    try {
+      setSubmitting(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error("Não autenticado");
+
+      const { data: result, error } = await supabase.functions.invoke("manage-credits", {
+        body: { targetUserId, setUnlimited: setUnlimitedValue },
+        headers: { 'Authorization': `Bearer ${sessionData.session.access_token}` }
+      });
+
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
+
+      toast({
+        title: setUnlimitedValue ? "Créditos definidos como Ilimitado!" : "Créditos Ilimitado removido!",
+        description: `${result.targetUser} agora tem créditos ${setUnlimitedValue ? 'ilimitados' : 'limitados'}.`,
+      });
+
+      loadMasterUsersWithDetails();
+      loadTransactions();
+    } catch (error: any) {
+      console.error("Error toggling unlimited:", error);
+      toast({
+        title: "Erro ao alterar créditos",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const creditedTransactions = transactions.filter(t => t.transaction_type === 'credit_added');
   const spentTransactions = transactions.filter(t => t.transaction_type === 'credit_spent');
   
@@ -637,16 +679,18 @@ export default function Carteira() {
             <CardDescription>
               {userRole === 'admin' 
                 ? 'Como administrador, você tem créditos ilimitados'
-                : 'Seu saldo disponível para criar e renovar usuários'}
+                : isUnlimited
+                  ? 'Seus créditos foram definidos como ilimitados'
+                  : 'Seu saldo disponível para criar e renovar usuários'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl sm:text-5xl font-bold text-primary">
-                {userRole === 'admin' ? '∞' : creditBalance ?? 0}
+                {(userRole === 'admin' || isUnlimited) ? '∞' : creditBalance ?? 0}
               </span>
               <span className="text-lg sm:text-xl text-muted-foreground">
-                {userRole === 'admin' ? 'Ilimitado' : 'créditos'}
+                {(userRole === 'admin' || isUnlimited) ? 'Ilimitado' : 'créditos'}
               </span>
             </div>
             {(userRole === 'admin' || userRole === 'master' || userRole === 'reseller') && (
@@ -761,12 +805,13 @@ export default function Carteira() {
                         </Button>
                       </TableHead>
                       <TableHead className="whitespace-nowrap">Último Login</TableHead>
+                      {userRole === 'admin' && <TableHead className="text-right whitespace-nowrap">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingMasterUsers ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
+                        <TableCell colSpan={userRole === 'admin' ? 6 : 5} className="text-center py-8">
                           <div className="flex justify-center">
                             <Loader2 className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                           </div>
@@ -774,7 +819,7 @@ export default function Carteira() {
                       </TableRow>
                     ) : filteredAndSortedUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={userRole === 'admin' ? 6 : 5} className="text-center py-8 text-muted-foreground">
                           {searchQuery || roleFilter !== 'all' 
                             ? 'Nenhum usuário encontrado com os filtros aplicados' 
                             : 'Nenhum usuário Master ou Revenda encontrado'}
@@ -793,7 +838,7 @@ export default function Carteira() {
                           </TableCell>
                           <TableCell className="text-right whitespace-nowrap">
                             <Badge variant="outline" className="font-mono">
-                              {user.credit_balance}
+                              {user.is_unlimited ? '∞ Ilimitado' : user.credit_balance}
                             </Badge>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
@@ -806,6 +851,19 @@ export default function Carteira() {
                               ? format(new Date(user.last_login_at), 'dd/MM/yyyy HH:mm')
                               : 'Nunca logou'}
                           </TableCell>
+                          {userRole === 'admin' && (
+                            <TableCell className="text-right whitespace-nowrap">
+                              <Button
+                                variant={user.is_unlimited ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleToggleUnlimited(user.user_id, !user.is_unlimited)}
+                                disabled={submitting}
+                                title={user.is_unlimited ? 'Remover ilimitado' : 'Definir como ilimitado'}
+                              >
+                                <Infinity className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     )}
