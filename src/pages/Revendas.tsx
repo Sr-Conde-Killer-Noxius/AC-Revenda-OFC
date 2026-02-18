@@ -1,17 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Edit, MoreVertical, Bell, ListChecks, Check, UserCog, RefreshCw, Shield, CalendarDays, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, Trash2, Edit, MoreVertical, Bell, ListChecks, Check, UserCog, RefreshCw, Shield, CalendarDays } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { NotificationDialog } from "@/components/NotificationDialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { FilterableSortableTable, type ColumnDef } from "@/components/FilterableSortableTable";
 import {
   Dialog,
   DialogContent,
@@ -135,9 +128,7 @@ export default function Revendas() {
   const [creditExpiryDialogOpen, setCreditExpiryDialogOpen] = useState(false);
   const [selectedResellerForCreditExpiry, setSelectedResellerForCreditExpiry] = useState<ResellerWithRole | null>(null);
   const [newCreditExpiryDate, setNewCreditExpiryDate] = useState<Date | undefined>(undefined);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const itemsPerPage = 15;
+  
   const { toast } = useToast();
 
   const form = useForm<ResellerFormData>({
@@ -516,25 +507,8 @@ export default function Revendas() {
     setDeleteDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      active: "default",
-      inactive: "secondary",
-      suspended: "destructive",
-    };
-    
-    const labels: Record<string, string> = {
-      active: "Ativo",
-      inactive: "Inativo",
-      suspended: "Suspenso",
-    };
 
-    return (
-      <Badge variant={variants[status] || "secondary"}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
+
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -836,24 +810,119 @@ export default function Revendas() {
     }
   };
 
-  const filteredResellers = useMemo(() => {
-    if (!searchTerm) return resellers;
-    const term = searchTerm.toLowerCase();
-    return resellers.filter(r =>
-      r.full_name?.toLowerCase().includes(term) ||
-      r.email?.toLowerCase().includes(term) ||
-      r.phone?.toLowerCase().includes(term)
+  const resellerColumns: ColumnDef<ResellerWithRole>[] = useMemo(() => {
+    const cols: ColumnDef<ResellerWithRole>[] = [
+      {
+        key: 'full_name', header: 'Nome', accessor: r => r.full_name || 'N/A',
+        render: r => <span className="font-medium">{r.full_name || 'N/A'}</span>,
+      },
+      { key: 'email', header: 'E-mail', accessor: r => r.email || 'N/A' },
+      { key: 'phone', header: 'Telefone', accessor: r => r.phone || 'N/A' },
+      {
+        key: 'role', header: 'Nível', accessor: r => r.role,
+        filterType: 'select', filterOptions: [{ label: 'Master', value: 'master' }, { label: 'Revenda', value: 'reseller' }],
+        render: r => <Badge variant={r.role === 'master' ? 'secondary' : 'outline'}>{r.role === 'master' ? 'Master' : 'Revenda'}</Badge>,
+      },
+    ];
+
+    if (userRole === 'admin') {
+      cols.push({
+        key: 'created_by', header: 'Abaixo de',
+        accessor: r => (!r.created_by || r.created_by === r.user_id) ? 'Ausente' : (r.creator?.[0]?.full_name || 'Ausente'),
+        sortable: false,
+        render: r => (
+          <Select value={r.created_by || ""} onValueChange={(value) => updateCreator(r.user_id, value)} disabled={changingCreator}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue>
+                {!r.created_by || r.created_by === r.user_id ? "Ausente" : r.creator?.[0]?.full_name || "Ausente"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {potentialCreators.map((creator) => (
+                <SelectItem key={creator.user_id} value={creator.user_id}>
+                  {creator.full_name} ({creator.role === 'admin' ? 'Admin' : 'Master'})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
+      });
+    }
+
+    cols.push(
+      { key: 'plano', header: 'Plano', accessor: r => r.planos?.nome || 'N/A' },
+      { key: 'valor', header: 'Valor', accessor: r => r.planos?.valor || 0, render: r => r.planos?.valor ? formatCurrency(r.planos.valor) : 'N/A' },
+      { key: 'expiry_date', header: 'Vencimento', accessor: r => r.expiry_date || '', render: r => r.expiry_date ? new Date(r.expiry_date).toLocaleDateString('pt-BR') : 'N/A' },
+      { key: 'credit_expiry_date', header: 'Venc. Crédito', accessor: r => r.credit_expiry_date || '', render: r => r.credit_expiry_date ? new Date(r.credit_expiry_date).toLocaleDateString('pt-BR') : 'N/A' },
+      {
+        key: 'status', header: 'Status', accessor: r => r.status,
+        filterType: 'select', filterOptions: [{ label: 'Ativo', value: 'active' }, { label: 'Inativo', value: 'inactive' }, { label: 'Suspenso', value: 'suspended' }],
+        render: r => {
+          const variants: Record<string, "default" | "secondary" | "destructive"> = { active: "default", inactive: "secondary", suspended: "destructive" };
+          const labels: Record<string, string> = { active: "Ativo", inactive: "Inativo", suspended: "Suspenso" };
+          return <Badge variant={variants[r.status] || "secondary"}>{labels[r.status] || r.status}</Badge>;
+        },
+      },
+      {
+        key: 'actions', header: 'Ações', accessor: () => '', sortable: false, filterable: false, align: 'right' as const,
+        render: r => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover">
+              <DropdownMenuItem onClick={() => handleEdit(r)}>
+                <Edit className="mr-2 h-4 w-4" /> Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(r)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><ListChecks className="mr-2 h-4 w-4" /> Alterar Status</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="bg-popover">
+                  <DropdownMenuItem onClick={() => updateResellerStatus(r.user_id, 'active')} disabled={updatingStatus}>
+                    {r.status === 'active' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Ativo
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateResellerStatus(r.user_id, 'inactive')} disabled={updatingStatus}>
+                    {r.status === 'inactive' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Inativo
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateResellerStatus(r.user_id, 'suspended')} disabled={updatingStatus}>
+                    {r.status === 'suspended' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Suspenso
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><Shield className="mr-2 h-4 w-4" /> Alterar Nível</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="bg-popover">
+                  <DropdownMenuItem onClick={() => updateResellerRole(r.user_id, 'master')} disabled={updatingRole}>
+                    {r.role === 'master' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Master
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateResellerRole(r.user_id, 'reseller')} disabled={updatingRole}>
+                    {r.role === 'reseller' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Revenda
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {userRole === 'admin' && (
+                <DropdownMenuItem onClick={() => handleOpenCreditExpiryDialog(r)}>
+                  <CalendarDays className="mr-2 h-4 w-4" /> Alterar Vencimento do Crédito
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleRenewCredit(r)} disabled={!canRenewCredit}>
+                <RefreshCw className="mr-2 h-4 w-4" /> Renovar Revenda
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSelectedReseller(r); setNotificationDialogOpen(true); }}>
+                <Bell className="mr-2 h-4 w-4" /> Notificar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      },
     );
-  }, [resellers, searchTerm]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredResellers.length / itemsPerPage));
-  const paginatedResellers = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredResellers.slice(start, start + itemsPerPage);
-  }, [filteredResellers, currentPage, itemsPerPage]);
-
-  // Reset page when search changes
-  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+    return cols;
+  }, [userRole, potentialCreators, changingCreator, updatingStatus, updatingRole, canRenewCredit]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -875,243 +944,14 @@ export default function Revendas() {
           </div>
         </div>
 
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, e-mail ou telefone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 max-w-sm"
-          />
-        </div>
-
-        <div className="rounded-lg border bg-card">
-          <div className="overflow-x-auto">
-            <Table className="min-w-max">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="whitespace-nowrap">Nome</TableHead>
-                  <TableHead className="whitespace-nowrap">E-mail</TableHead>
-                  <TableHead className="whitespace-nowrap">Telefone</TableHead>
-                  <TableHead className="whitespace-nowrap">Nível</TableHead>
-                  {userRole === 'admin' && <TableHead className="whitespace-nowrap">Abaixo de</TableHead>}
-                  <TableHead className="whitespace-nowrap">Plano</TableHead>
-                  <TableHead className="whitespace-nowrap">Valor</TableHead>
-                  <TableHead className="whitespace-nowrap">Vencimento</TableHead>
-                  <TableHead className="whitespace-nowrap">Vencimento do Crédito</TableHead>
-                  <TableHead className="whitespace-nowrap">Status</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={userRole === 'admin' ? 11 : 10} className="text-center py-8">
-                      <div className="flex justify-center">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredResellers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={userRole === 'admin' ? 11 : 10} className="text-center py-8 text-muted-foreground">
-                      {searchTerm ? "Nenhuma revenda encontrada com esse filtro" : "Nenhuma revenda encontrada"}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedResellers.map((reseller) => (
-                    <TableRow key={reseller.id}>
-                      <TableCell className="font-medium whitespace-nowrap">
-                        {reseller.full_name || "N/A"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{reseller.email || "N/A"}</TableCell>
-                      <TableCell className="whitespace-nowrap">{reseller.phone || "N/A"}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <Badge
-                          variant={reseller.role === "master" ? "secondary" : "outline"}
-                        >
-                          {reseller.role === "master" ? "Master" : "Revenda"}
-                        </Badge>
-                      </TableCell>
-                      {userRole === 'admin' && (
-                        <TableCell className="whitespace-nowrap">
-                          <Select
-                            value={reseller.created_by || ""}
-                            onValueChange={(value) => updateCreator(reseller.user_id, value)}
-                            disabled={changingCreator}
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue>
-                                {!reseller.created_by || reseller.created_by === reseller.user_id 
-                                  ? "Ausente" 
-                                  : reseller.creator?.[0]?.full_name || "Ausente"}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {potentialCreators.map((creator) => (
-                                <SelectItem key={creator.user_id} value={creator.user_id}>
-                                  {creator.full_name} ({creator.role === 'admin' ? 'Admin' : 'Master'})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      )}
-                      <TableCell className="whitespace-nowrap">{reseller.planos?.nome || "N/A"}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {reseller.planos?.valor 
-                          ? formatCurrency(reseller.planos.valor)
-                          : "N/A"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {reseller.expiry_date 
-                          ? new Date(reseller.expiry_date).toLocaleDateString("pt-BR")
-                          : "N/A"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {reseller.credit_expiry_date 
-                          ? new Date(reseller.credit_expiry_date).toLocaleDateString("pt-BR")
-                          : "N/A"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{getStatusBadge(reseller.status)}</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover">
-                            <DropdownMenuItem onClick={() => handleEdit(reseller)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => handleDelete(reseller)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <ListChecks className="mr-2 h-4 w-4" />
-                                Mudar Status
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="bg-popover">
-                                <DropdownMenuItem 
-                                  onClick={() => updateResellerStatus(reseller.user_id, 'active')}
-                                  disabled={updatingStatus}
-                                >
-                                  {reseller.status === 'active' && <Check className="mr-2 h-4 w-4" />}
-                                  {reseller.status !== 'active' && <span className="mr-6" />}
-                                  Ativo
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => updateResellerStatus(reseller.user_id, 'inactive')}
-                                  disabled={updatingStatus}
-                                >
-                                  {reseller.status === 'inactive' && <Check className="mr-2 h-4 w-4" />}
-                                  {reseller.status !== 'inactive' && <span className="mr-6" />}
-                                  Inativo
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => updateResellerStatus(reseller.user_id, 'suspended')}
-                                  disabled={updatingStatus}
-                                >
-                                  {reseller.status === 'suspended' && <Check className="mr-2 h-4 w-4" />}
-                                  {reseller.status !== 'suspended' && <span className="mr-6" />}
-                                  Suspenso
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <Shield className="mr-2 h-4 w-4" />
-                                Alterar Nível
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="bg-popover">
-                                <DropdownMenuItem 
-                                  onClick={() => updateResellerRole(reseller.user_id, 'master')}
-                                  disabled={updatingRole}
-                                >
-                                  {reseller.role === 'master' && <Check className="mr-2 h-4 w-4" />}
-                                  {reseller.role !== 'master' && <span className="mr-6" />}
-                                  Master
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => updateResellerRole(reseller.user_id, 'reseller')}
-                                  disabled={updatingRole}
-                                >
-                                  {reseller.role === 'reseller' && <Check className="mr-2 h-4 w-4" />}
-                                  {reseller.role !== 'reseller' && <span className="mr-6" />}
-                                  Revenda
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            {userRole === 'admin' && (
-                              <DropdownMenuItem onClick={() => handleOpenCreditExpiryDialog(reseller)}>
-                                <CalendarDays className="mr-2 h-4 w-4" />
-                                Alterar Vencimento do Crédito
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleRenewCredit(reseller)}
-                              disabled={!canRenewCredit}
-                            >
-                              <RefreshCw className="mr-2 h-4 w-4" />
-                              Renovar Revenda
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedReseller(reseller);
-                              setNotificationDialogOpen(true);
-                            }}>
-                              <Bell className="mr-2 h-4 w-4" />
-                              Notificar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-
-        {/* Pagination */}
-        {filteredResellers.length > itemsPerPage && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-muted-foreground">
-              Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredResellers.length)} de {filteredResellers.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Anterior
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {currentPage} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Próximo
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <FilterableSortableTable
+          data={resellers}
+          columns={resellerColumns}
+          loading={loading}
+          emptyMessage="Nenhuma revenda encontrada"
+          keyExtractor={r => r.id}
+          pageSize={10}
+        />
       </main>
 
       {/* Create Dialog */}
