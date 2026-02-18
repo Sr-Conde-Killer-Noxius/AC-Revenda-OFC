@@ -18,16 +18,16 @@ export function AppHeader({ title, subtitle }: AppHeaderProps) {
     queryKey: ['user-credits', user?.id],
     queryFn: async () => {
       if (!user || userRole === 'reseller') return null;
-      if (userRole === 'admin') return { balance: null };
+      if (userRole === 'admin') return { balance: null, is_unlimited: true };
       
       const { data, error } = await supabase
         .from('user_credits')
-        .select('balance')
+        .select('balance, is_unlimited')
         .eq('user_id', user.id)
         .maybeSingle();
       
       if (error && error.code !== 'PGRST116') throw error;
-      return data || { balance: 0 };
+      return data || { balance: 0, is_unlimited: false };
     },
     enabled: !!user && userRole !== 'reseller',
     refetchInterval: 30000,
@@ -47,7 +47,7 @@ export function AppHeader({ title, subtitle }: AppHeaderProps) {
           <div className="flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-primary/10 border border-primary/20 neon-border max-w-full">
             <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
             <span className="text-xs sm:text-sm font-medium text-foreground truncate">
-              {userRole === 'admin' 
+              {userRole === 'admin' || creditData?.is_unlimited
                 ? 'Créditos: Ilimitado' 
                 : `Créditos: ${creditData?.balance ?? 0}`}
             </span>

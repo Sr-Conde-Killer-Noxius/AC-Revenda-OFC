@@ -23,18 +23,18 @@ serve(async (req) => {
     });
 
     // Get request body
-    const { targetUserId, amount } = await req.json();
+    const { targetUserId, amount, setUnlimited } = await req.json();
 
-    console.log('Managing credits:', { targetUserId, amount });
+    console.log('Managing credits:', { targetUserId, amount, setUnlimited });
 
     // Validate inputs
-    if (!targetUserId || !amount) {
-      throw new Error('Missing or invalid required fields');
+    if (!targetUserId) {
+      throw new Error('Missing targetUserId');
     }
 
-    // Allow negative amounts for removal
-    if (amount === 0) {
-      throw new Error('Amount cannot be zero');
+    // If setting unlimited, we don't need amount
+    if (setUnlimited === undefined && (!amount || amount === 0)) {
+      throw new Error('Missing or invalid required fields');
     }
 
     // Check if requesting user is admin
@@ -75,15 +75,67 @@ serve(async (req) => {
       throw new Error('Only admins can manage credits');
     }
 
+    // Handle setUnlimited toggle
+    if (setUnlimited !== undefined) {
+      const { error: upsertError } = await supabaseAdmin
+        .from('user_credits')
+        .upsert({
+          user_id: targetUserId,
+          is_unlimited: !!setUnlimited,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (upsertError) throw upsertError;
+
+      const { data: targetProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', targetUserId)
+        .single();
+
+      // Record transaction
+      await supabaseAdmin
+        .from('credit_transactions')
+        .insert({
+          user_id: targetUserId,
+          transaction_type: 'credit_added',
+          amount: 0,
+          balance_after: 0,
+          description: setUnlimited 
+            ? 'Admin definiu créditos como Ilimitado'
+            : 'Admin removeu créditos Ilimitado',
+          performed_by: requestingUser.id
+        });
+
+      console.log('Unlimited status updated successfully');
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          isUnlimited: !!setUnlimited,
+          targetUser: targetProfile?.full_name
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
     // Get or create user_credits record
     const { data: existingCredits, error: fetchError } = await supabaseAdmin
       .from('user_credits')
-      .select('balance')
+      .select('balance, is_unlimited')
       .eq('user_id', targetUserId)
       .maybeSingle();
 
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows
+    if (fetchError && fetchError.code !== 'PGRST116') {
       throw fetchError;
+    }
+
+    // If user has unlimited credits, don't allow numeric changes
+    if (existingCredits?.is_unlimited) {
+      throw new Error('Usuário possui créditos ilimitados. Remova o ilimitado antes de alterar o saldo.');
     }
 
     const currentBalance = existingCredits?.balance || 0;
@@ -103,9 +155,7 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' });
 
-    if (upsertError) {
-      throw upsertError;
-    }
+    if (upsertError) throw upsertError;
 
     // Get target user name for description
     const { data: targetProfile } = await supabaseAdmin
@@ -128,9 +178,7 @@ serve(async (req) => {
         performed_by: requestingUser.id
       });
 
-    if (transactionError) {
-      throw transactionError;
-    }
+    if (transactionError) throw transactionError;
 
     console.log('Credits added successfully');
 
