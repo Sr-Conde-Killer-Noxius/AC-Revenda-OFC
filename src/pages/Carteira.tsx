@@ -789,7 +789,7 @@ export default function Carteira() {
                             </TableCell>
                             <TableCell className="whitespace-nowrap">{descriptionText}</TableCell>
                             <TableCell className="text-right whitespace-nowrap">
-                              <Badge variant={isAddition ? "default" : "destructive"} className={isAddition ? "bg-green-600" : ""}>
+                              <Badge variant={isAddition ? "success" : "destructive"}>
                                 {isAddition ? `+${transaction.amount}` : transaction.amount}
                               </Badge>
                             </TableCell>
@@ -812,7 +812,7 @@ export default function Carteira() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Repeat2 className="h-5 w-5 text-purple-600" />
+                <Repeat2 className="h-5 w-5 text-primary" />
                 Histórico de Créditos Gerenciados por Masters
               </CardTitle>
               <CardDescription>
@@ -881,7 +881,7 @@ export default function Carteira() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+                <TrendingUp className="h-5 w-5 text-success" />
                 Créditos Adquiridos (Seu Saldo)
               </CardTitle>
               <CardDescription>
@@ -924,10 +924,7 @@ export default function Carteira() {
                             {transaction.description}
                           </TableCell>
                           <TableCell className="text-right whitespace-nowrap">
-                            <Badge 
-                              variant={transaction.amount > 0 ? "default" : "destructive"} 
-                              className={transaction.amount > 0 ? "bg-green-600" : ""}
-                            >
+                            <Badge variant={transaction.amount > 0 ? "success" : "destructive"}>
                               {transaction.amount > 0 ? `+${transaction.amount}` : transaction.amount}
                             </Badge>
                           </TableCell>
@@ -948,7 +945,7 @@ export default function Carteira() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-orange-600" />
+              <TrendingDown className="h-5 w-5 text-warning" />
               Créditos Gastos
             </CardTitle>
             <CardDescription>
