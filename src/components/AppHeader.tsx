@@ -43,14 +43,20 @@ export function AppHeader({ title, subtitle }: AppHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {userRole !== 'reseller' && (
+        {userRole && (
           <div className="flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-primary/10 border border-primary/20 neon-border max-w-full">
-            <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-            <span className="text-xs sm:text-sm font-medium text-foreground truncate">
-              {userRole === 'admin' || creditData?.is_unlimited
-                ? 'Créditos: Ilimitado' 
-                : `Créditos: ${creditData?.balance ?? 0}`}
-            </span>
+            <span className="text-xs sm:text-sm font-medium text-primary capitalize">{userRole}</span>
+            {userRole !== 'reseller' && (
+              <>
+                <span className="text-muted-foreground">|</span>
+                <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                <span className="text-xs sm:text-sm font-medium text-foreground truncate">
+                  {userRole === 'admin' || creditData?.is_unlimited
+                    ? 'Ilimitado' 
+                    : creditData?.balance ?? 0}
+                </span>
+              </>
+            )}
           </div>
         )}
         
