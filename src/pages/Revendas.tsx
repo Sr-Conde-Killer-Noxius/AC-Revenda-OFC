@@ -671,7 +671,7 @@ export default function Revendas() {
 
   const canRenewCredit = userRole === 'admin' || (userRole === 'master' && (userCredits || 0) >= 1);
 
-  const updateResellerRole = async (userId: string, newRole: 'master' | 'reseller') => {
+  const updateResellerRole = async (userId: string, newRole: 'master' | 'reseller' | 'cliente') => {
     try {
       setUpdatingRole(true);
 
@@ -702,7 +702,8 @@ export default function Revendas() {
 
       const roleLabels: Record<string, string> = {
         master: "Master",
-        reseller: "Revenda"
+        reseller: "Revenda",
+        cliente: "Cliente"
       };
 
       toast({
@@ -902,6 +903,9 @@ export default function Revendas() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => updateResellerRole(r.user_id, 'reseller')} disabled={updatingRole}>
                     {r.role === 'reseller' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Revenda
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateResellerRole(r.user_id, 'cliente')} disabled={updatingRole}>
+                    {r.role === 'cliente' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Cliente
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>

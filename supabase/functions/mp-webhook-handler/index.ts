@@ -93,13 +93,14 @@ serve(async (req) => {
       // Execute credit transfer: deduct from receiver, add to payer
       const { data: receiverCredits } = await supabaseAdmin
         .from('user_credits')
-        .select('balance')
+        .select('balance, is_unlimited')
         .eq('user_id', payment.receiver_id)
         .maybeSingle();
 
       const receiverBalance = receiverCredits?.balance || 0;
+      const receiverIsUnlimited = receiverCredits?.is_unlimited || false;
 
-      if (receiverBalance < payment.amount_credits) {
+      if (!receiverIsUnlimited && receiverBalance < payment.amount_credits) {
         console.error(`Receiver ${payment.receiver_id} has insufficient credits: ${receiverBalance} < ${payment.amount_credits}`);
         // Mark as error state but don't fail the webhook
         await supabaseAdmin
@@ -111,7 +112,8 @@ serve(async (req) => {
         });
       }
 
-      const newReceiverBalance = receiverBalance - payment.amount_credits;
+      // If unlimited, don't deduct from balance
+      const newReceiverBalance = receiverIsUnlimited ? receiverBalance : receiverBalance - payment.amount_credits;
 
       const { data: payerCredits } = await supabaseAdmin
         .from('user_credits')

@@ -64,19 +64,20 @@ serve(async (req) => {
     const isRemoval = amount < 0;
     const absAmount = Math.abs(amount);
 
-    // 1. Check credits
+    // 1. Check credits (including is_unlimited flag)
     const { data: initiatorCredits, error: initiatorCreditsError } = await supabaseAdmin
       .from('user_credits')
-      .select('balance')
+      .select('balance, is_unlimited')
       .eq('user_id', requestingUserId)
       .maybeSingle();
 
     if (initiatorCreditsError) throw initiatorCreditsError;
     const currentInitiatorBalance = initiatorCredits?.balance || 0;
+    const initiatorIsUnlimited = initiatorCredits?.is_unlimited || false;
 
     const { data: targetCredits, error: targetCreditsError } = await supabaseAdmin
       .from('user_credits')
-      .select('balance')
+      .select('balance, is_unlimited')
       .eq('user_id', targetUserId)
       .maybeSingle();
 
@@ -88,7 +89,8 @@ serve(async (req) => {
         throw new Error(`O usuário alvo tem apenas ${currentTargetBalance} créditos. Não é possível remover ${absAmount}.`);
       }
     } else {
-      if (currentInitiatorBalance < absAmount) {
+      // Skip balance check if initiator has unlimited credits
+      if (!initiatorIsUnlimited && currentInitiatorBalance < absAmount) {
         throw new Error(`Créditos insuficientes. Saldo atual: ${currentInitiatorBalance}`);
       }
     }
@@ -101,7 +103,8 @@ serve(async (req) => {
       newTargetBalance = currentTargetBalance - absAmount;
       newInitiatorBalance = currentInitiatorBalance + absAmount;
     } else {
-      newInitiatorBalance = currentInitiatorBalance - absAmount;
+      // If unlimited, don't deduct from balance
+      newInitiatorBalance = initiatorIsUnlimited ? currentInitiatorBalance : currentInitiatorBalance - absAmount;
       newTargetBalance = currentTargetBalance + absAmount;
     }
 
