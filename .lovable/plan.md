@@ -1,41 +1,75 @@
 
 
-# Fix: Creditos Infinitos - Frontend Blocking Transfers
+# Plano: Webhook Acerto Certo somente para role "cliente"
 
-## Root Cause
+## Resumo
 
-The error "Voce tem 0 creditos, mas precisa de 1" happens **before** the edge function is even called. The problem is on **line 203** of `Carteira.tsx`:
+A integração com Acerto Certo passará a funcionar **somente para usuários com role "cliente"**. Para os demais roles (admin, master, reseller), o código do webhook será mantido no arquivo mas desativado via condicional + comentário explicativo. O código original fica intacto, apenas envolvido por uma verificação de role.
+
+## Arquivos afetados
+
+### 1. `supabase/functions/create-reseller-user/index.ts`
+- Antes do bloco do webhook (linha ~249), adicionar verificação: `if (resellerRole === 'cliente') { ... }`
+- O bloco inteiro do webhook (linhas ~249-393) fica dentro desse `if`
+- Adicionar comentário: `// [18/02/2026] Integração Acerto Certo temporariamente restrita apenas a role 'cliente'. Demais roles não enviam webhook. Manter código comentado/condicional até segunda ordem.`
+- No `else`, adicionar log: `console.log('Role is not cliente, skipping Acerto Certo webhook');`
+
+### 2. `supabase/functions/create-test-reseller-user/index.ts`
+- Mesmo tratamento: envolver o bloco do webhook (linhas ~171-294) com `if (resellerRole === 'cliente') { ... }`
+- Mesmo comentário explicativo
+- No `else`, log de skip
+
+### 3. `supabase/functions/delete-reseller-user/index.ts`
+- Antes do bloco do webhook (linha ~89), buscar a role do usuário sendo deletado na tabela `user_roles`
+- Envolver todo o bloco de webhook + log de historico (linhas ~89-185) com `if (targetUserRole === 'cliente') { ... }`
+- No `else`, pular direto para a exclusão do usuário (linha ~189)
+- Mesmo comentário explicativo
+
+### 4. `supabase/functions/update-reseller-user/index.ts`
+- Antes do bloco de webhook de status (linha ~176), buscar a role do usuário alvo na tabela `user_roles`
+- Envolver o bloco de webhook (linhas ~176-259) com verificação: só envia se a role do usuário alvo for `cliente`
+- No `else`, log de skip
+- Mesmo comentário explicativo
+
+## Detalhes Tecnicos
+
+### Padrao de alteracao em cada arquivo
+
+Para `create-reseller-user` e `create-test-reseller-user`, o `resellerRole` ja esta disponivel no escopo, entao basta:
 
 ```typescript
-if (creditBalance === null || creditBalance < parseInt(creditAmount)) {
-  toast({ title: "Creditos insuficientes", ... });
-  return;
+// [18/02/2026] Integração Acerto Certo temporariamente restrita apenas a role 'cliente'.
+// Demais roles (admin, master, reseller) não enviam webhook para Acerto Certo.
+// Manter este condicional até segunda ordem.
+if (resellerRole === 'cliente') {
+  // ... bloco inteiro do webhook permanece intacto ...
+} else {
+  console.log(`Role '${resellerRole}' is not 'cliente', skipping Acerto Certo webhook.`);
 }
 ```
 
-For unlimited users, `creditBalance` is set to `null` (line 84), so `creditBalance === null` is `true`, which triggers the error toast and **blocks the request entirely**. The edge function (which correctly handles `is_unlimited`) never gets called.
+Para `delete-reseller-user` e `update-reseller-user`, sera necessario buscar a role do usuario alvo antes do bloco de webhook:
 
-## Solution
-
-Update the frontend validation in `handleAddCredits` to skip the balance check when the user has unlimited credits (`isUnlimited === true`).
-
-### File: `src/pages/Carteira.tsx`
-
-**Change line 203** from:
 ```typescript
-if (creditBalance === null || creditBalance < parseInt(creditAmount)) {
+// Buscar role do usuario alvo para decidir se envia webhook
+const { data: targetRoleData } = await supabaseAdmin
+  .from('user_roles')
+  .select('role')
+  .eq('user_id', userId)
+  .maybeSingle();
+const targetUserRole = targetRoleData?.role;
+
+// [18/02/2026] Integração Acerto Certo temporariamente restrita apenas a role 'cliente'.
+if (targetUserRole === 'cliente') {
+  // ... bloco inteiro do webhook permanece intacto ...
+} else {
+  console.log(`Target user role '${targetUserRole}' is not 'cliente', skipping Acerto Certo webhook.`);
+}
 ```
-to:
-```typescript
-if (!isUnlimited && (creditBalance === null || creditBalance < parseInt(creditAmount))) {
-```
 
-This single-line fix ensures:
-- Unlimited users bypass the frontend balance validation entirely
-- The edge function handles the rest (it already works correctly for unlimited users)
-- Non-unlimited users still get the same frontend validation as before
+### Importante
 
-## No Other Changes Needed
-
-The edge functions (`transfer-credits-master-to-master`, `mp-create-payment`, `mp-webhook-handler`) already correctly check for `is_unlimited` and skip balance validation when it's `true`. Only the frontend was blocking the flow.
+- Nenhum codigo sera removido ou comentado com `//` - todo o codigo original permanece funcional, apenas protegido por um `if`
+- Se no futuro quiser reativar para todos os roles, basta remover o `if`/`else`
+- As 4 edge functions serao redeployadas automaticamente apos a edicao
 
