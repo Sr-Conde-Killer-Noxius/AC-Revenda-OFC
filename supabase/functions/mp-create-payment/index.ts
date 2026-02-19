@@ -73,15 +73,16 @@ serve(async (req) => {
 
     const totalPrice = Number(mpConfig.unit_price) * quantity;
 
-    // Check if receiver has enough credits
+    // Check if receiver has enough credits (skip if unlimited)
     const { data: receiverCredits } = await supabaseAdmin
       .from('user_credits')
-      .select('balance')
+      .select('balance, is_unlimited')
       .eq('user_id', receiverId)
       .maybeSingle();
 
     const receiverBalance = receiverCredits?.balance || 0;
-    if (receiverBalance < quantity) {
+    const receiverIsUnlimited = receiverCredits?.is_unlimited || false;
+    if (!receiverIsUnlimited && receiverBalance < quantity) {
       throw new Error('Seu superior não possui créditos suficientes no momento.');
     }
 
