@@ -39,7 +39,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -878,25 +881,35 @@ export default function Revendas() {
               <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(r)}>
                 <Trash2 className="mr-2 h-4 w-4" /> Excluir
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Alterar Status</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => updateResellerStatus(r.user_id, 'active')} disabled={updatingStatus}>
-                {r.status === 'active' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Ativo
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => updateResellerStatus(r.user_id, 'inactive')} disabled={updatingStatus}>
-                {r.status === 'inactive' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Inativo
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => updateResellerStatus(r.user_id, 'suspended')} disabled={updatingStatus}>
-                {r.status === 'suspended' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Suspenso
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Alterar Nível</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => updateResellerRole(r.user_id, 'master')} disabled={updatingRole}>
-                {r.role === 'master' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Master
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => updateResellerRole(r.user_id, 'reseller')} disabled={updatingRole}>
-                {r.role === 'reseller' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Revenda
-              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><ListChecks className="mr-2 h-4 w-4" /> Alterar Status</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="bg-popover border border-border shadow-lg z-[100]">
+                    <DropdownMenuItem onSelect={() => updateResellerStatus(r.user_id, 'active')} disabled={updatingStatus}>
+                      {r.status === 'active' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Ativo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => updateResellerStatus(r.user_id, 'inactive')} disabled={updatingStatus}>
+                      {r.status === 'inactive' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Inativo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => updateResellerStatus(r.user_id, 'suspended')} disabled={updatingStatus}>
+                      {r.status === 'suspended' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Suspenso
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><Shield className="mr-2 h-4 w-4" /> Alterar Nível</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="bg-popover border border-border shadow-lg z-[100]">
+                    <DropdownMenuItem onSelect={() => updateResellerRole(r.user_id, 'master')} disabled={updatingRole}>
+                      {r.role === 'master' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Master
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => updateResellerRole(r.user_id, 'reseller')} disabled={updatingRole}>
+                      {r.role === 'reseller' ? <Check className="mr-2 h-4 w-4" /> : <span className="mr-6" />} Revenda
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
               {userRole === 'admin' && (
                 <DropdownMenuItem onClick={() => handleOpenCreditExpiryDialog(r)}>
                   <CalendarDays className="mr-2 h-4 w-4" /> Alterar Vencimento do Crédito
