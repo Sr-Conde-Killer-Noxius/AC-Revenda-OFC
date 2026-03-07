@@ -1,75 +1,48 @@
 
 
-# Plano: Webhook Acerto Certo somente para role "cliente"
+# Plano: Ajuste pontual - Renovar todos masters/resellers no Acerto Certo com vencimento 2030
 
 ## Resumo
 
-A integração com Acerto Certo passará a funcionar **somente para usuários com role "cliente"**. Para os demais roles (admin, master, reseller), o código do webhook será mantido no arquivo mas desativado via condicional + comentário explicativo. O código original fica intacto, apenas envolvido por uma verificação de role.
+Criar uma edge function temporaria `bulk-renew-acerto-certo` que:
+1. Busca todos os usuarios com role `master` ou `reseller`
+2. Atualiza no banco: `status = 'active'`, `credit_expiry_date = '2030-01-01'`, `expiry_date = '2030-01-01'`
+3. Envia payload `update_user_status` com `newStatus: 'active'` para o Acerto Certo (URL: `https://cgqyfpsfymhntumrmbzj.supabase.co/functions/v1/revenda-webhook-listener`) para cada um dos 12 usuarios
+4. Registra cada envio no `acerto_certo_webhook_history`
 
-## Arquivos afetados
+## Arquivo
 
-### 1. `supabase/functions/create-reseller-user/index.ts`
-- Antes do bloco do webhook (linha ~249), adicionar verificação: `if (resellerRole === 'cliente') { ... }`
-- O bloco inteiro do webhook (linhas ~249-393) fica dentro desse `if`
-- Adicionar comentário: `// [18/02/2026] Integração Acerto Certo temporariamente restrita apenas a role 'cliente'. Demais roles não enviam webhook. Manter código comentado/condicional até segunda ordem.`
-- No `else`, adicionar log: `console.log('Role is not cliente, skipping Acerto Certo webhook');`
+### `supabase/functions/bulk-renew-acerto-certo/index.ts` (novo)
 
-### 2. `supabase/functions/create-test-reseller-user/index.ts`
-- Mesmo tratamento: envolver o bloco do webhook (linhas ~171-294) com `if (resellerRole === 'cliente') { ... }`
-- Mesmo comentário explicativo
-- No `else`, log de skip
+- Edge function protegida por service role (sem JWT, valida manualmente)
+- Busca todos users com role IN ('master', 'reseller') na `user_roles`
+- Para cada usuario:
+  - Update `profiles` com `status = 'active'`, `credit_expiry_date = '2030-01-01T00:00:00Z'`, `expiry_date = '2030-01-01T00:00:00Z'`
+  - Envia POST para o webhook Acerto Certo com payload `{ eventType: 'update_user_status', userId, newStatus: 'active' }`
+  - Insere registro no `acerto_certo_webhook_history`
+- Retorna resumo com sucesso/falha por usuario
 
-### 3. `supabase/functions/delete-reseller-user/index.ts`
-- Antes do bloco do webhook (linha ~89), buscar a role do usuário sendo deletado na tabela `user_roles`
-- Envolver todo o bloco de webhook + log de historico (linhas ~89-185) com `if (targetUserRole === 'cliente') { ... }`
-- No `else`, pular direto para a exclusão do usuário (linha ~189)
-- Mesmo comentário explicativo
+## Detalhes tecnicos
 
-### 4. `supabase/functions/update-reseller-user/index.ts`
-- Antes do bloco de webhook de status (linha ~176), buscar a role do usuário alvo na tabela `user_roles`
-- Envolver o bloco de webhook (linhas ~176-259) com verificação: só envia se a role do usuário alvo for `cliente`
-- No `else`, log de skip
-- Mesmo comentário explicativo
+- A funcao sera invocada uma unica vez via `supabase--curl_edge_functions`
+- Usa `ACERTO_CERTO_API_KEY` (ja configurada) no header Authorization
+- Busca webhook URL de `webhook_configs` (config_key = 'acerto_certo_webhook_url')
+- Apos confirmar execucao, a edge function pode ser deletada (descartavel)
 
-## Detalhes Tecnicos
+## Usuarios afetados (12)
 
-### Padrao de alteracao em cada arquivo
-
-Para `create-reseller-user` e `create-test-reseller-user`, o `resellerRole` ja esta disponivel no escopo, entao basta:
-
-```typescript
-// [18/02/2026] Integração Acerto Certo temporariamente restrita apenas a role 'cliente'.
-// Demais roles (admin, master, reseller) não enviam webhook para Acerto Certo.
-// Manter este condicional até segunda ordem.
-if (resellerRole === 'cliente') {
-  // ... bloco inteiro do webhook permanece intacto ...
-} else {
-  console.log(`Role '${resellerRole}' is not 'cliente', skipping Acerto Certo webhook.`);
-}
-```
-
-Para `delete-reseller-user` e `update-reseller-user`, sera necessario buscar a role do usuario alvo antes do bloco de webhook:
-
-```typescript
-// Buscar role do usuario alvo para decidir se envia webhook
-const { data: targetRoleData } = await supabaseAdmin
-  .from('user_roles')
-  .select('role')
-  .eq('user_id', userId)
-  .maybeSingle();
-const targetUserRole = targetRoleData?.role;
-
-// [18/02/2026] Integração Acerto Certo temporariamente restrita apenas a role 'cliente'.
-if (targetUserRole === 'cliente') {
-  // ... bloco inteiro do webhook permanece intacto ...
-} else {
-  console.log(`Target user role '${targetUserRole}' is not 'cliente', skipping Acerto Certo webhook.`);
-}
-```
-
-### Importante
-
-- Nenhum codigo sera removido ou comentado com `//` - todo o codigo original permanece funcional, apenas protegido por um `if`
-- Se no futuro quiser reativar para todos os roles, basta remover o `if`/`else`
-- As 4 edge functions serao redeployadas automaticamente apos a edicao
+| Nome | Role | Status atual |
+|---|---|---|
+| Eliandro Oliveira | reseller | active |
+| 2Revenda.Teste | master | active |
+| Alexsandro de Oliveira Sousa | master | inactive |
+| CENTRAL STORE OFICIAL | master | inactive |
+| Fran4111 | reseller | inactive |
+| Kleydson Pessanha | master | inactive |
+| MASTER MICHEL | reseller | active |
+| Paulo Sergio | reseller | inactive |
+| Revenda Eduardo | reseller | active |
+| Revenda hamilton 20 | reseller | active |
+| Revenda.Teste | master | inactive |
+| Tiago | reseller | inactive |
 
